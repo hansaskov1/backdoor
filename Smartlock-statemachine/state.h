@@ -6,9 +6,19 @@
 #include "transition.h"
 
 class State {
-    private:
-        std::string name;
-        std::vector<Transition> transitions;
+    std::string name;
+    std::vector<Transition> transitions;
+
+    public:
+        State(std::string name);
+        
+        std::string getName();
+
+        std::string setName(std::string name);
+
+        void addTransition(Transition transition);
+
+        std::vector<Transition> getTransitions();
 };
 
 #endif
