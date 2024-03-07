@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// Place global declarations here.
+</declaration>
+	<template>
+		<name>Human</name>
+		<parameter>chan &amp;open_door, chan &amp;which_state, chan &amp;door_opened, chan &amp;door_closed</parameter>
+		<location id="id0" x="0" y="0">
+		</location>
+		<location id="id1" x="-153" y="0">
+			<name x="-229" y="-34">door_command</name>
+		</location>
+		<location id="id2" x="161" y="0">
+			<name x="144" y="-34">state_command</name>
+		</location>
+		<init ref="id0"/>
+		<transition id="id3">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-51" y="34">door_closed!</label>
+			<nail x="-17" y="34"/>
+			<nail x="8" y="34"/>
+		</transition>
+		<transition id="id4">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-51" y="-59">door_opened!</label>
+			<nail x="-17" y="-34"/>
+			<nail x="8" y="-34"/>
+		</transition>
+		<transition id="id5">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<nail x="-76" y="59"/>
+			<nail x="-51" y="42"/>
+		</transition>
+		<transition id="id6">
+			<source ref="id2"/>
+			<target ref="id0"/>
+			<nail x="85" y="59"/>
+		</transition>
+		<transition id="id7">
+			<source ref="id0"/>
+			<target ref="id2"/>
+			<label kind="synchronisation" x="34" y="-25">which_state!</label>
+		</transition>
+		<transition id="id8">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="-119" y="-25">open_door!</label>
+		</transition>
+	</template>
+	<template>
+		<name>DoorSensor</name>
+		<parameter>bool &amp;door_sensor, chan &amp;door_opened, chan &amp;door_closed</parameter>
+		<location id="id9" x="25" y="0">
+			<name x="-26" y="-34">sensor_false</name>
+		</location>
+		<location id="id10" x="-263" y="0">
+			<name x="-314" y="-34">sensor_true</name>
+		</location>
+		<init ref="id9"/>
+		<transition id="id11">
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="synchronisation" x="-187" y="85">door_closed?</label>
+			<label kind="assignment" x="-212" y="102">door_sensor = false</label>
+			<nail x="-127" y="85"/>
+		</transition>
+		<transition id="id12">
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="synchronisation" x="-170" y="-42">door_opened?</label>
+			<label kind="assignment" x="-195" y="-25">door_sensor = true</label>
+		</transition>
+	</template>
+	<template>
+		<name>LockSensor</name>
+		<parameter>bool &amp;lock_sensor, chan &amp;open_door</parameter>
+		<declaration>clock unlocked_duration;</declaration>
+		<location id="id13" x="0" y="0">
+			<name x="-10" y="-34">sensor_false</name>
+		</location>
+		<location id="id14" x="-246" y="0">
+			<name x="-305" y="-34">sensor_true</name>
+			<label kind="invariant" x="-416" y="17">unlocked_duration &lt;= 10</label>
+		</location>
+		<init ref="id13"/>
+		<transition id="id15">
+			<source ref="id14"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-212" y="76">unlocked_duration &gt;= 10</label>
+			<label kind="assignment" x="-204" y="93">lock_sensor = false</label>
+			<nail x="-119" y="76"/>
+		</transition>
+		<transition id="id16">
+			<source ref="id13"/>
+			<target ref="id14"/>
+			<label kind="synchronisation" x="-161" y="-59">open_door?</label>
+			<label kind="assignment" x="-204" y="-42">lock_sensor = true,
+unlocked_duration = 0</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">LockState</name>
+		<parameter>bool &amp;lock_sensor, bool &amp;door_sensor, chan &amp;open_door</parameter>
+		<declaration>// Place local declarations here.
+clock duration_in_state;
+</declaration>
+		<location id="id17" x="8" y="-59">
+			<name x="-17" y="-42">Locked</name>
+		</location>
+		<location id="id18" x="-136" y="-195">
+			<name x="-196" y="-229">Unlocking</name>
+			<label kind="invariant" x="-349" y="-187">duration_in_state &lt;= 10</label>
+		</location>
+		<location id="id19" x="0" y="-323">
+			<name x="-33" y="-357">Unlocked</name>
+		</location>
+		<location id="id20" x="136" y="-195">
+			<name x="119" y="-229">Locking</name>
+		</location>
+		<init ref="id17"/>
+		<transition id="id21">
+			<source ref="id18"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-297" y="-51">duration_in_state &gt;= 10 &amp;&amp;
+lock_sensor == false</label>
+			<nail x="-136" y="-59"/>
+		</transition>
+		<transition id="id22">
+			<source ref="id20"/>
+			<target ref="id17"/>
+			<label kind="guard" x="68" y="-119">lock_sensor == false</label>
+		</transition>
+		<transition id="id23">
+			<source ref="id19"/>
+			<target ref="id20"/>
+			<label kind="guard" x="59" y="-314">duration_in_state &gt;= 5 &amp;&amp;
+door_sensor == false</label>
+		</transition>
+		<transition id="id24">
+			<source ref="id18"/>
+			<target ref="id19"/>
+			<label kind="guard" x="-246" y="-289">lock_sensor == true</label>
+			<label kind="assignment" x="-263" y="-272">duration_in_state = 0</label>
+		</transition>
+		<transition id="id25">
+			<source ref="id17"/>
+			<target ref="id18"/>
+			<label kind="synchronisation" x="-76" y="-161">open_door?</label>
+			<label kind="assignment" x="-246" y="-127">duration_in_state = 0</label>
+		</transition>
+	</template>
+	<system>chan open_door;
+chan which_state;
+chan door_opened;
+chan door_closed;
+
+bool lock_sensor = false;
+bool door_sensor = false;
+
+// Place template instantiations here.
+//Process = Template();
+Lock_p = LockState(lock_sensor,door_sensor,open_door);
+Human_p = Human(open_door,which_state,door_opened,door_closed);
+DoorSensor_p = DoorSensor(door_sensor, door_opened, door_closed);
+LockSensor_p = LockSensor(lock_sensor, open_door);
+
+// List one or more processes to be composed into a system.
+system Human_p, Lock_p, DoorSensor_p, LockSensor_p;
+
+</system>
+	<queries>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+	</queries>
+</nta>
