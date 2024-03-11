@@ -7,11 +7,8 @@ use esp_idf_hal::delay::FreeRtos;
 use esp_idf_hal::gpio::*;
 use esp_idf_hal::peripherals::Peripherals;
 
-
 type Lock<'a> = Component<'a, LockState, Gpio18, Gpio33>;
 type Door<'a> = Component<'a, DoorState, Gpio4, Gpio14>;
-
-
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum States {
