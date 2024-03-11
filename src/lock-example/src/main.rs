@@ -12,12 +12,9 @@ use esp_idf_hal::peripherals::Peripherals;
 fn main() -> anyhow::Result<()> {
     esp_idf_hal::sys::link_patches();
 
-    esp_idf_svc::wifi::
-
     let peripherals = Peripherals::take()?;
     let mut led = PinDriver::output(peripherals.pins.gpio4)?;
     let mut button = PinDriver::input(peripherals.pins.gpio33)?;
-
 
     let mut prev_state = false;
 
