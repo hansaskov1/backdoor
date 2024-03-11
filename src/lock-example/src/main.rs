@@ -62,13 +62,13 @@ fn main() -> anyhow::Result<()> {
                 .only_if(|store| store.lock.state == LockState::Unlocked)
             .on(Event::Step)
                 .go_to(States::Locked)
-                .only_if(|store| store.duration_in_state.elapsed() > Duration::from_secs(10))
+                .only_if(|store| store.duration_in_state.elapsed() > Duration::from_secs(10) && store.door.state == DoorState::Closed)
         .state(States::Unlocked)
             .on(Event::Step)
                 .go_to(States::Locking)
                 .only_if(|store| {
                     store.door.state == DoorState::Closed
-                        && store.duration_in_state.elapsed() > Duration::from_secs(5)
+                    && store.duration_in_state.elapsed() > Duration::from_secs(5)
                 })
         .state(States::Locking)
             .on(Event::Step)
@@ -80,7 +80,7 @@ fn main() -> anyhow::Result<()> {
 
     log::info!("State: {:?}", state_machine.state);
     state_machine.trigger(Event::OpenDoor);
-    
+
 
     loop {
         FreeRtos::delay_ms(10);

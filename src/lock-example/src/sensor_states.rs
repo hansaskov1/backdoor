@@ -36,8 +36,8 @@ pub enum LockState {
 impl From<bool> for LockState {
     fn from(sensor: bool) -> Self {
         match sensor {
-            true => LockState::Unlocked,
-            false => LockState::Locked,
+            true => LockState::Locked,
+            false => LockState::Unlocked,
         }
     }
 }
