@@ -1,9 +1,16 @@
 use fluent_state_machine::StateMachineBuilder;
+use lock_example::component::Component;
+use lock_example::sensor_states::{DoorState, LockState};
 use std::time::{Duration, Instant};
 
 use esp_idf_hal::delay::FreeRtos;
 use esp_idf_hal::gpio::*;
 use esp_idf_hal::peripherals::Peripherals;
+
+
+type Lock<'a> = Component<'a, LockState, Gpio18, Gpio33>;
+type Door<'a> = Component<'a, DoorState, Gpio4, Gpio14>;
+
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -20,121 +27,20 @@ enum Event {
     Step,
 }
 
-#[derive(PartialEq, Copy, Clone)]
-enum DoorState {
-    Open,
-    Closed,
-}
-
-impl From<bool> for DoorState {
-    fn from(sensor: bool) -> Self {
-        match sensor {
-            true => DoorState::Closed,
-            false => DoorState::Open,
-        }
-    }
-}
-
-// Implement the not trait so we can use the `!` operator to invert the state.
-impl std::ops::Not for DoorState {
-    type Output = Self;
-
-    fn not(self) -> Self::Output {
-        match self {
-            DoorState::Open => DoorState::Closed,
-            DoorState::Closed => DoorState::Open,
-        }
-    }
-}
-
-
-#[derive(PartialEq, Copy, Clone)]
-enum LockState {
-    Locked,
-    Unlocked,
-}
-
-impl From<bool> for LockState {
-    fn from(sensor: bool) -> Self {
-        match sensor {
-            true => LockState::Unlocked,
-            false => LockState::Locked,
-        }
-    }
-}
-
-// Implement the not trait so we can use the `!` operator to invert the state.
-impl std::ops::Not for LockState {
-    type Output = Self;
-
-    fn not(self) -> Self::Output {
-        match self {
-            LockState::Locked => LockState::Unlocked,
-            LockState::Unlocked => LockState::Locked,
-        }
-    }
-}
-
-struct Component<'a, S, P1, P2>
-where
-    S: From<bool> + std::ops::Not<Output = S> + Copy,
-    P1: OutputPin,
-    P2: InputPin,
-{
-    previous_reading: bool,
-    state: S,
-    led: PinDriver<'a, P1, Output>,
-    button: PinDriver<'a, P2, Input>,
-}
-
-impl<'a, S, P1, P2> Component<'a, S, P1, P2>
-where
-    S: From<bool> + std::ops::Not<Output = S> + Copy,
-    P1: OutputPin,
-    P2: InputPin + esp_idf_hal::gpio::OutputPin,
-{
-    pub fn new(led_pin: P1, button_pin: P2) -> anyhow::Result<Self> {
-        let led = PinDriver::output(led_pin)?;
-        let mut button = PinDriver::input(button_pin)?;
-
-        button.set_pull(Pull::Down)?;
-
-        Ok(Self {
-            previous_reading: button.is_high(),
-            state: button.is_high().into(),
-            led,
-            button,
-        })
-    }
-
-    pub fn step(&mut self) -> anyhow::Result<()> {
-        let current_reading = self.button.is_high();
-
-        if self.previous_reading != current_reading && current_reading == true {
-            self.led.toggle()?;
-            self.state = !self.state;
-        }
-
-        self.previous_reading = current_reading;
-
-        Ok(())
-    }
-}
-
-
-type Lock<'a> = Component<'a, LockState, Gpio18, Gpio33>;
-type Door<'a> = Component<'a, DoorState, Gpio4, Gpio14>;
-
-
-
 struct Store<'a> {
     lock: Lock<'a>,
     door: Door<'a>,
     duration_in_state: Instant,
 }
 
+
 fn main() -> anyhow::Result<()> {
     esp_idf_hal::sys::link_patches();
+
+    // Bind the log crate to the ESP Logging facilities
+    esp_idf_svc::log::EspLogger::initialize_default();
+
+    log::info!("Starting up!");
 
     let peripherals = Peripherals::take()?;
 
@@ -146,8 +52,9 @@ fn main() -> anyhow::Result<()> {
 
     // Construct state machine.
     let mut state_machine = StateMachineBuilder::new(store, States::Locked)
-        .set_global_action(|store| {
+        .set_global_action(|store, state, _| {
             store.duration_in_state = Instant::now();
+            log::info!("State: {:?}", state);
         })
         .state(States::Locked)
             .on(Event::OpenDoor)
@@ -173,12 +80,16 @@ fn main() -> anyhow::Result<()> {
         .build()
         .unwrap();
 
+
+    log::info!("State: {:?}", state_machine.state);
+    state_machine.trigger(Event::OpenDoor);
+    log::info!("State: {:?}", state_machine.state);
+
     loop {
         FreeRtos::delay_ms(10);
 
         state_machine.store.lock.step()?;
         state_machine.store.door.step()?;
-
-
+        state_machine.trigger(Event::Step);
     }
 }
