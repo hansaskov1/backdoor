@@ -80,7 +80,7 @@ fn main() -> anyhow::Result<()> {
 
     log::info!("State: {:?}", state_machine.state);
     state_machine.trigger(Event::OpenDoor);
-    log::info!("State: {:?}", state_machine.state);
+    
 
     loop {
         FreeRtos::delay_ms(10);
