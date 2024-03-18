@@ -39,8 +39,10 @@ fn main() -> anyhow::Result<()> {
 
     log::info!("Starting up!");
 
+    // Mandetory for ESP-IDF to work.
     let peripherals = Peripherals::take()?;
 
+    // Values will be accesable within the state machine.
     let store = Store {
         lock: Component::new(peripherals.pins.gpio18, peripherals.pins.gpio33)?,
         door: Component::new(peripherals.pins.gpio4, peripherals.pins.gpio14)?,
@@ -87,6 +89,8 @@ fn main() -> anyhow::Result<()> {
     log::info!("State: {:?}", state_machine.state);
     state_machine.trigger(Event::OpenDoor);
 
+
+    // Our main runtime
     loop {
         FreeRtos::delay_ms(10);
 
