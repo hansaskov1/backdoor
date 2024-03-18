@@ -47,12 +47,18 @@ fn main() -> anyhow::Result<()> {
         duration_in_state: Instant::now(),
     };
 
+    // Function that will be called on every state change.
+    let global_action = |store: &mut Store, state: &States, _: &Event| {
+        // Reset the duration in state.
+        store.duration_in_state = Instant::now();
+
+        // Log when the state changes
+        log::info!("State: {:?}", state);
+    };
+
     // Construct state machine.
     let mut state_machine = StateMachineBuilder::new(store, States::Locked)
-        .set_global_action(|store, state, _| {
-            store.duration_in_state = Instant::now();
-            log::info!("State: {:?}", state);
-        })
+        .set_global_action(global_action)
         .state(States::Locked)
             .on(Event::OpenDoor)
                 .go_to(States::Unlocking)
@@ -80,7 +86,6 @@ fn main() -> anyhow::Result<()> {
 
     log::info!("State: {:?}", state_machine.state);
     state_machine.trigger(Event::OpenDoor);
-
 
     loop {
         FreeRtos::delay_ms(10);
