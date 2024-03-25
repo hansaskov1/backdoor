@@ -34,10 +34,26 @@ curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-
 
 Install the necessary tools and utilities for working with the Espressif IoT Development Framework (ESP-IDF).
 
-```
+``` bash
 cargo-binstall cargo-generate
 cargo-binstall ldproxy
 cargo-binstall espup
 cargo-binstall espflash
 cargo-binstall cargo-espflash # Optional
+```
+
+## Build the rust binary
+To create the esp32 executeable run 
+``` bash
+cargo build
+```
+
+## To flash the newly made binary run
+``` bash
+espflash flash target/xtensa-esp32-espidf/debug/lock-example
+```
+
+## To monitor the run
+``` bash
+espflash monitor
 ```
