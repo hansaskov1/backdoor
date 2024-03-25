@@ -22,7 +22,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ### Cargo-binstall
 
-Install cargo-binstall, a tool for installing Cargo subcommands and other binaries from crates.
+Install cargo-binstall, a tool for installing the binaries directly instead of compiling them This will reduce the setup time immensely.
 
 ```bash
 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
