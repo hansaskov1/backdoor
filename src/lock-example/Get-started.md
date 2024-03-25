@@ -48,6 +48,12 @@ To create the esp32 executeable run
 cargo build
 ```
 
+## Install toolchaings for Espressif
+``` bash
+espup install
+. $HOME/export-esp.sh
+```
+
 ## To flash the newly made binary run
 ``` bash
 espflash flash target/xtensa-esp32-espidf/debug/lock-example
