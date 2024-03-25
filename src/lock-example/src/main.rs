@@ -118,9 +118,11 @@ use esp_idf_svc::{eventloop::EspSystemEventLoop, nvs::EspDefaultNvsPartition};
 
 use log::info;
 
+// NOTICE: Change this to your WiFi network SSID
 const SSID: &str = "hansaskov";
 const PASSWORD: &str = "hansaskov";
 
+// NOTICE: Change this to your MQTT broker URL, make sure the broker is on the same network as you
 const MQTT_URL: &str = "mqtt://192.168.112.193:1883";
 const MQTT_TOPIC: &str = "hello";
 
