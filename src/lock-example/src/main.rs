@@ -105,11 +105,14 @@ fn main() -> anyhow::Result<()> {
 */
 
 use core::convert::TryInto;
+use std::time::Duration;
 
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 
+use esp_idf_hal::sys::EspError;
 use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::log::EspLogger;
+use esp_idf_svc::mqtt::client::{EspMqttClient, EspMqttConnection, MqttClientConfiguration, QoS};
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_svc::{eventloop::EspSystemEventLoop, nvs::EspDefaultNvsPartition};
 
@@ -117,6 +120,10 @@ use log::info;
 
 const SSID: &str = "hansaskov";
 const PASSWORD: &str = "hansaskov";
+
+const MQTT_URL: &str = "mqtt://192.168.112.193:1883";
+const MQTT_CLIENT_ID: &str = "esp-mqtt-demo";
+const MQTT_TOPIC: &str = "hello";
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -126,23 +133,59 @@ fn main() -> anyhow::Result<()> {
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
 
+    // Configure Wifi
     let mut wifi = BlockingWifi::wrap(
         EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))?,
         sys_loop,
     )?;
 
+    // Establish connection to WiFi network
     connect_wifi(&mut wifi)?;
 
-    let ip_info = wifi.wifi().sta_netif().get_ip_info()?;
+    // Configure MQTT client
+    info!("About to start the MQTT client");
+    let (mut mqtt_client, mut mqtt_conn) = EspMqttClient::new(
+        MQTT_URL,
+        &MqttClientConfiguration {
+            client_id: Some(MQTT_CLIENT_ID),
+            ..Default::default()
+        },
+    )?;
 
-    info!("Wifi DHCP info: {:?}", ip_info);
-
-    info!("Shutting down in 5s...");
-
-    std::thread::sleep(core::time::Duration::from_secs(5));
+    run(&mut mqtt_client, &mut mqtt_conn, MQTT_TOPIC)?;
 
     Ok(())
 }
+
+
+fn run(
+    client: &mut EspMqttClient<'_>,
+    connection: &mut EspMqttConnection,
+    topic: &str,
+) -> Result<(), EspError> {
+    std::thread::scope(|scope| {
+        let message = "Hello from esp-mqtt-demo!";
+        let message_bytes = message.as_bytes();
+        let sleep_duration = Duration::from_secs(2);
+
+        std::thread::Builder::new()
+            .stack_size(6000)
+            .spawn_scoped(scope, || loop {
+                while let Ok(event) = connection.next() {}
+            })
+            .unwrap();
+
+        client.subscribe(topic, QoS::AtMostOnce)?;
+        std::thread::sleep(Duration::from_millis(500));
+
+        loop {
+            client.enqueue(topic, QoS::AtMostOnce, false, message_bytes)?;
+            info!("Sent message: {}", message);
+            std::thread::sleep(sleep_duration);
+        }
+    })
+}
+
 
 fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()> {
 
