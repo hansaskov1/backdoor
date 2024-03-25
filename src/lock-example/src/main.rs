@@ -122,7 +122,7 @@ const SSID: &str = "hansaskov";
 const PASSWORD: &str = "hansaskov";
 
 const MQTT_URL: &str = "mqtt://192.168.112.193:1883";
-const MQTT_TOPIC: &str = "Hello from esp";
+const MQTT_TOPIC: &str = "hello";
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -161,7 +161,7 @@ fn run(
     topic: &str,
 ) -> Result<(), EspError> {
     std::thread::scope(|scope| {
-        let message = "Hello from esp-mqtt-demo!";
+        let message = "Hello from esp!";
         let message_bytes = message.as_bytes();
         let sleep_duration = Duration::from_secs(2);
 
