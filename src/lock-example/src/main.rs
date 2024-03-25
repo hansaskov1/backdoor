@@ -122,8 +122,7 @@ const SSID: &str = "hansaskov";
 const PASSWORD: &str = "hansaskov";
 
 const MQTT_URL: &str = "mqtt://192.168.112.193:1883";
-const MQTT_CLIENT_ID: &str = "esp-mqtt-demo";
-const MQTT_TOPIC: &str = "hello";
+const MQTT_TOPIC: &str = "Hello from esp";
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -146,12 +145,10 @@ fn main() -> anyhow::Result<()> {
     info!("About to start the MQTT client");
     let (mut mqtt_client, mut mqtt_conn) = EspMqttClient::new(
         MQTT_URL,
-        &MqttClientConfiguration {
-            client_id: Some(MQTT_CLIENT_ID),
-            ..Default::default()
-        },
+        &MqttClientConfiguration::default() ,
     )?;
 
+    // Run event loop
     run(&mut mqtt_client, &mut mqtt_conn, MQTT_TOPIC)?;
 
     Ok(())
@@ -171,7 +168,7 @@ fn run(
         std::thread::Builder::new()
             .stack_size(6000)
             .spawn_scoped(scope, || loop {
-                while let Ok(event) = connection.next() {}
+                while let Ok(_event) = connection.next() {}
             })
             .unwrap();
 
