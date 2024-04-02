@@ -42,16 +42,16 @@ cargo-binstall espflash
 cargo-binstall cargo-espflash # Optional
 ```
 
-## Build the rust binary
-To create the esp32 executeable run 
-``` bash
-cargo build
-```
-
 ## Install toolchaings for Espressif
 ``` bash
 espup install
 . $HOME/export-esp.sh
+```
+
+## Build the rust binary
+To create the esp32 executeable run 
+``` bash
+cargo build
 ```
 
 ## To flash the newly made binary run
