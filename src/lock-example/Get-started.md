@@ -53,6 +53,7 @@ To create the esp32 executeable run
 ``` bash
 cargo build
 ```
+The binary is saved in the following directory: `target/xtensa-esp32-espidf/debug/lock-example`
 
 ## To flash the newly made binary run
 ``` bash
