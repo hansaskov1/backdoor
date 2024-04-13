@@ -2,8 +2,10 @@
 <!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
 <nta>
 	<declaration>// Place global declarations here.
+clock sys_timer;
 clock unlocked_duration;
 
+broadcast chan unlock_request;
 broadcast chan unlock_door;
 chan which_state;
 chan state_request;
@@ -15,119 +17,151 @@ bool lock_sensor = false;</declaration>
 	<template>
 		<name>MQTT</name>
 		<location id="id0" x="-161" y="0">
-			<name x="-204" y="17">RequestState</name>
+			<name x="-212" y="-42">RequestState</name>
 			<committed/>
 		</location>
 		<location id="id1" x="0" y="0">
-			<name x="-34" y="17">NoRequest</name>
+			<name x="-34" y="-42">NoRequest</name>
 		</location>
 		<location id="id2" x="-340" y="0">
-			<name x="-391" y="17">SendRequest</name>
+			<name x="-408" y="-42">SendRequestState</name>
+			<urgent/>
+		</location>
+		<location id="id3" x="153" y="0">
+			<name x="110" y="-42">RequestOpen</name>
+			<committed/>
+		</location>
+		<location id="id4" x="323" y="0">
+			<name x="255" y="-42">SendRequestUnlock</name>
+			<urgent/>
 		</location>
 		<init ref="id1"/>
-		<transition id="id3">
+		<transition id="id5">
+			<source ref="id4"/>
+			<target ref="id1"/>
+			<nail x="153" y="102"/>
+		</transition>
+		<transition id="id6">
+			<source ref="id2"/>
+			<target ref="id1"/>
+			<nail x="-161" y="102"/>
+		</transition>
+		<transition id="id7">
+			<source ref="id3"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="170" y="-25">unlock_request!</label>
+		</transition>
+		<transition id="id8">
+			<source ref="id1"/>
+			<target ref="id3"/>
+			<label kind="synchronisation" x="25" y="-25">unlock_door?</label>
+		</transition>
+		<transition id="id9">
 			<source ref="id0"/>
 			<target ref="id2"/>
-			<label kind="synchronisation" x="-297" y="-25">state_request!</label>
+			<label kind="synchronisation" x="-306" y="-25">state_request!</label>
 		</transition>
-		<transition id="id4">
+		<transition id="id10">
 			<source ref="id1"/>
 			<target ref="id0"/>
-			<label kind="synchronisation" x="-119" y="-25">which_state?</label>
+			<label kind="synchronisation" x="-127" y="-25">which_state?</label>
 		</transition>
 	</template>
 	<template>
 		<name>Human</name>
-		<location id="id5" x="0" y="0">
+		<location id="id11" x="0" y="0">
 		</location>
-		<location id="id6" x="-153" y="0">
-			<name x="-229" y="-34">door_command</name>
+		<location id="id12" x="-187" y="0">
+			<name x="-263" y="-34">door_command</name>
+			<urgent/>
 		</location>
-		<location id="id7" x="161" y="0">
+		<location id="id13" x="161" y="0">
 			<name x="144" y="-34">state_command</name>
+			<urgent/>
 		</location>
-		<init ref="id5"/>
-		<transition id="id8">
-			<source ref="id5"/>
-			<target ref="id5"/>
+		<init ref="id11"/>
+		<transition id="id14">
+			<source ref="id11"/>
+			<target ref="id11"/>
 			<label kind="synchronisation" x="-51" y="34">door_closed!</label>
 			<nail x="-17" y="34"/>
 			<nail x="8" y="34"/>
 		</transition>
-		<transition id="id9">
-			<source ref="id5"/>
-			<target ref="id5"/>
-			<label kind="guard" x="-85" y="-59">lock_sensor == true</label>
+		<transition id="id15">
+			<source ref="id11"/>
+			<target ref="id11"/>
+			<label kind="guard" x="-76" y="-59">lock_sensor == true</label>
 			<label kind="synchronisation" x="-51" y="-76">door_opened!</label>
 			<nail x="-17" y="-34"/>
 			<nail x="8" y="-34"/>
 		</transition>
-		<transition id="id10">
-			<source ref="id6"/>
-			<target ref="id5"/>
-			<nail x="-76" y="59"/>
-			<nail x="-51" y="42"/>
+		<transition id="id16">
+			<source ref="id12"/>
+			<target ref="id11"/>
+			<nail x="-93" y="34"/>
+			<nail x="-51" y="17"/>
 		</transition>
-		<transition id="id11">
-			<source ref="id7"/>
-			<target ref="id5"/>
-			<nail x="85" y="59"/>
+		<transition id="id17">
+			<source ref="id13"/>
+			<target ref="id11"/>
+			<nail x="85" y="34"/>
 		</transition>
-		<transition id="id12">
-			<source ref="id5"/>
-			<target ref="id7"/>
+		<transition id="id18">
+			<source ref="id11"/>
+			<target ref="id13"/>
 			<label kind="synchronisation" x="34" y="-25">which_state!</label>
 		</transition>
-		<transition id="id13">
-			<source ref="id5"/>
-			<target ref="id6"/>
-			<label kind="synchronisation" x="-119" y="-25">unlock_door!</label>
+		<transition id="id19">
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="synchronisation" x="-136" y="-25">unlock_door!</label>
+			<label kind="assignment" x="-144" y="-42">sys_timer = 0</label>
 		</transition>
 	</template>
 	<template>
 		<name>DoorSensor</name>
-		<location id="id14" x="25" y="0">
+		<location id="id20" x="25" y="0">
 			<name x="-26" y="-34">sensor_false</name>
 		</location>
-		<location id="id15" x="-263" y="0">
+		<location id="id21" x="-263" y="0">
 			<name x="-314" y="-34">sensor_true</name>
 		</location>
-		<init ref="id14"/>
-		<transition id="id16">
-			<source ref="id15"/>
-			<target ref="id14"/>
+		<init ref="id20"/>
+		<transition id="id22">
+			<source ref="id21"/>
+			<target ref="id20"/>
 			<label kind="synchronisation" x="-187" y="85">door_closed?</label>
 			<label kind="assignment" x="-212" y="102">door_sensor = false</label>
 			<nail x="-127" y="85"/>
 		</transition>
-		<transition id="id17">
-			<source ref="id14"/>
-			<target ref="id15"/>
+		<transition id="id23">
+			<source ref="id20"/>
+			<target ref="id21"/>
 			<label kind="synchronisation" x="-170" y="-42">door_opened?</label>
 			<label kind="assignment" x="-195" y="-25">door_sensor = true</label>
 		</transition>
 	</template>
 	<template>
 		<name>LockSensor</name>
-		<location id="id18" x="0" y="0">
+		<location id="id24" x="0" y="0">
 			<name x="-10" y="-34">sensor_false</name>
 		</location>
-		<location id="id19" x="-246" y="0">
+		<location id="id25" x="-246" y="0">
 			<name x="-305" y="-34">sensor_true</name>
 			<label kind="invariant" x="-416" y="17">unlocked_duration &lt;= 10</label>
 		</location>
-		<init ref="id18"/>
-		<transition id="id20">
-			<source ref="id19"/>
-			<target ref="id18"/>
+		<init ref="id24"/>
+		<transition id="id26">
+			<source ref="id25"/>
+			<target ref="id24"/>
 			<label kind="guard" x="-212" y="76">unlocked_duration &gt;= 10</label>
 			<label kind="assignment" x="-204" y="93">lock_sensor = false</label>
 			<nail x="-119" y="76"/>
 		</transition>
-		<transition id="id21">
-			<source ref="id18"/>
-			<target ref="id19"/>
-			<label kind="synchronisation" x="-161" y="-59">unlock_door?</label>
+		<transition id="id27">
+			<source ref="id24"/>
+			<target ref="id25"/>
+			<label kind="synchronisation" x="-187" y="-59">unlock_request?</label>
 			<label kind="assignment" x="-204" y="-42">lock_sensor = true,
 unlocked_duration = 0</label>
 		</transition>
@@ -137,48 +171,77 @@ unlocked_duration = 0</label>
 		<declaration>// Place local declarations here.
 clock duration_in_state;
 </declaration>
-		<location id="id22" x="8" y="-59">
+		<location id="id28" x="8" y="-59">
 			<name x="-17" y="-42">Locked</name>
 		</location>
-		<location id="id23" x="-136" y="-195">
-			<name x="-196" y="-229">Unlocking</name>
-			<label kind="invariant" x="-349" y="-187">duration_in_state &lt;= 10</label>
+		<location id="id29" x="-136" y="-195">
+			<name x="-195" y="-238">Unlocking</name>
+			<label kind="invariant" x="-348" y="-178">duration_in_state &lt;= 10</label>
 		</location>
-		<location id="id24" x="0" y="-323">
+		<location id="id30" x="0" y="-323">
 			<name x="-33" y="-357">Unlocked</name>
 		</location>
-		<location id="id25" x="136" y="-195">
+		<location id="id31" x="136" y="-195">
 			<name x="119" y="-229">Locking</name>
 		</location>
-		<init ref="id22"/>
-		<transition id="id26">
-			<source ref="id23"/>
-			<target ref="id22"/>
+		<init ref="id28"/>
+		<transition id="id32">
+			<source ref="id31"/>
+			<target ref="id31"/>
+			<label kind="synchronisation" x="178" y="-204">state_request?</label>
+			<nail x="170" y="-204"/>
+			<nail x="170" y="-187"/>
+		</transition>
+		<transition id="id33">
+			<source ref="id30"/>
+			<target ref="id30"/>
+			<label kind="synchronisation" x="-161" y="-340">state_request?</label>
+			<nail x="-34" y="-323"/>
+			<nail x="-25" y="-340"/>
+		</transition>
+		<transition id="id34">
+			<source ref="id29"/>
+			<target ref="id29"/>
+			<label kind="synchronisation" x="-297" y="-212">state_request?</label>
+			<nail x="-161" y="-212"/>
+			<nail x="-170" y="-195"/>
+		</transition>
+		<transition id="id35">
+			<source ref="id28"/>
+			<target ref="id28"/>
+			<label kind="synchronisation" x="51" y="-68">state_request?</label>
+			<nail x="34" y="-76"/>
+			<nail x="42" y="-68"/>
+			<nail x="42" y="-51"/>
+		</transition>
+		<transition id="id36">
+			<source ref="id29"/>
+			<target ref="id28"/>
 			<label kind="guard" x="-297" y="-51">duration_in_state &gt;= 10 &amp;&amp;
 lock_sensor == false</label>
 			<nail x="-136" y="-59"/>
 		</transition>
-		<transition id="id27">
-			<source ref="id25"/>
-			<target ref="id22"/>
-			<label kind="guard" x="68" y="-119">lock_sensor == false</label>
+		<transition id="id37">
+			<source ref="id31"/>
+			<target ref="id28"/>
+			<label kind="guard" x="85" y="-136">lock_sensor == false</label>
 		</transition>
-		<transition id="id28">
-			<source ref="id24"/>
-			<target ref="id25"/>
-			<label kind="guard" x="59" y="-314">duration_in_state &gt;= 5 &amp;&amp;
+		<transition id="id38">
+			<source ref="id30"/>
+			<target ref="id31"/>
+			<label kind="guard" x="68" y="-297">duration_in_state &gt;= 5 &amp;&amp;
 door_sensor == false</label>
 		</transition>
-		<transition id="id29">
-			<source ref="id23"/>
-			<target ref="id24"/>
-			<label kind="guard" x="-246" y="-289">lock_sensor == true</label>
-			<label kind="assignment" x="-263" y="-272">duration_in_state = 0</label>
+		<transition id="id39">
+			<source ref="id29"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-238" y="-297">lock_sensor == true</label>
+			<label kind="assignment" x="-255" y="-280">duration_in_state = 0</label>
 		</transition>
-		<transition id="id30">
-			<source ref="id22"/>
-			<target ref="id23"/>
-			<label kind="synchronisation" x="-76" y="-161">unlock_door?</label>
+		<transition id="id40">
+			<source ref="id28"/>
+			<target ref="id29"/>
+			<label kind="synchronisation" x="-76" y="-161">unlock_request?</label>
 			<label kind="assignment" x="-246" y="-127">duration_in_state = 0</label>
 		</transition>
 	</template>
@@ -191,7 +254,7 @@ LockSensor_p = LockSensor();
 MQTT_p = MQTT();
 
 // List one or more processes to be composed into a system.
-system Human_p, Lock_p, DoorSensor_p, LockSensor_p;
+system Human_p, Lock_p, DoorSensor_p, LockSensor_p, MQTT_p;
 
 </system>
 	<queries>
