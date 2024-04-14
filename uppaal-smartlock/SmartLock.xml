@@ -39,12 +39,15 @@ bool lock_sensor = false;</declaration>
 		<transition id="id5">
 			<source ref="id4"/>
 			<target ref="id1"/>
-			<nail x="153" y="102"/>
+			<nail x="272" y="85"/>
+			<nail x="42" y="85"/>
+			<nail x="8" y="17"/>
 		</transition>
 		<transition id="id6">
 			<source ref="id2"/>
 			<target ref="id1"/>
-			<nail x="-161" y="102"/>
+			<nail x="-289" y="85"/>
+			<nail x="-59" y="85"/>
 		</transition>
 		<transition id="id7">
 			<source ref="id3"/>
