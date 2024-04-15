@@ -101,22 +101,40 @@ fn main() -> anyhow::Result<()> {
         state_machine.trigger(Event::Step);
     }
 }
-
 */
+
 
 use core::convert::TryInto;
 use std::time::Duration;
-
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 
+use esp_idf_hal::gpio::{Gpio14, Gpio18, Gpio33, Gpio4};
 use esp_idf_hal::sys::EspError;
 use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::log::EspLogger;
 use esp_idf_svc::mqtt::client::{EspMqttClient, EspMqttConnection, MqttClientConfiguration, QoS};
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_svc::{eventloop::EspSystemEventLoop, nvs::EspDefaultNvsPartition};
-
+use lock_example::component::Component;
+use lock_example::sensor_states::{DoorState, LockState};
 use log::info;
+
+type Lock<'a> = Component<'a, LockState, Gpio18, Gpio33>;
+type Door<'a> = Component<'a, DoorState, Gpio4, Gpio14>;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum States {
+    Locked,
+    Unlocked,
+    Locking,
+    Unlocking,
+}
+
+#[derive(PartialEq)]
+enum Event {
+    OpenDoor,
+}
+
 
 // NOTICE: Change this to your WiFi network SSID
 const SSID: &str = "hansaskov";
@@ -133,6 +151,9 @@ fn main() -> anyhow::Result<()> {
     let peripherals = Peripherals::take()?;
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
+
+    let lock: Lock = Component::new(peripherals.pins.gpio18, peripherals.pins.gpio33)?;
+    let door: Door = Component::new(peripherals.pins.gpio4, peripherals.pins.gpio14)?;
 
     // Configure Wifi
     let mut wifi = BlockingWifi::wrap(
@@ -151,8 +172,7 @@ fn main() -> anyhow::Result<()> {
     )?;
 
     // Run event loop
-    run(&mut mqtt_client, &mut mqtt_conn, MQTT_TOPIC)?;
-
+    run(&mut mqtt_client, &mut mqtt_conn, lock, door, MQTT_TOPIC)?;
     Ok(())
 }
 
@@ -160,6 +180,8 @@ fn main() -> anyhow::Result<()> {
 fn run(
     client: &mut EspMqttClient<'_>,
     connection: &mut EspMqttConnection,
+    lock: Lock,
+    door: Door,
     topic: &str,
 ) -> Result<(), EspError> {
     std::thread::scope(|scope| {
