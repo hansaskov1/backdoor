@@ -1,5 +1,4 @@
 use core::convert::TryInto;
-use std::io::Read;
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 use std::time::{Duration, Instant};
 
@@ -7,10 +6,10 @@ use esp_idf_hal::gpio::{Gpio14, Gpio18, Gpio33, Gpio4};
 
 use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::log::EspLogger;
-use esp_idf_svc::mqtt::client::{EspMqttClient, EspMqttConnection, MqttClientConfiguration, QoS};
+use esp_idf_svc::mqtt::client::{EspMqttClient, MqttClientConfiguration, QoS};
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_svc::{eventloop::EspSystemEventLoop, nvs::EspDefaultNvsPartition};
-use fluent_state_machine::{StateMachine, StateMachineBuilder};
+use fluent_state_machine::StateMachineBuilder;
 use lock_example::component::Component;
 use lock_example::sensor_states::{DoorState, LockState};
 use log::info;
@@ -144,7 +143,7 @@ fn main() -> anyhow::Result<()> {
                                     let message = String::from_utf8(data.to_vec()).unwrap();
                                     info!(
                                         "Received event: {:#?}, topic: {:#?}, data: {:#?}, details: {:#?}",
-                                        id, topic, message, details
+                                        id, topic.unwrap(), message, details
                                     );
 
 
