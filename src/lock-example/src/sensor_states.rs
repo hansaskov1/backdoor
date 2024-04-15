@@ -1,4 +1,3 @@
-
 #[derive(PartialEq, Copy, Clone)]
 pub enum DoorState {
     Open,
@@ -26,7 +25,6 @@ impl std::ops::Not for DoorState {
     }
 }
 
-
 #[derive(PartialEq, Copy, Clone)]
 pub enum LockState {
     Locked,
@@ -53,4 +51,3 @@ impl std::ops::Not for LockState {
         }
     }
 }
-

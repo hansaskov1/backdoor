@@ -1,4 +1,3 @@
-
 use esp_idf_hal::gpio::*;
 
 pub struct Component<'a, S, P1, P2>
@@ -38,7 +37,6 @@ where
         let current_reading = self.button.is_high();
 
         if self.previous_reading != current_reading && current_reading == true {
-
             self.led.toggle()?;
             self.state = self.led.is_set_high().into();
         }

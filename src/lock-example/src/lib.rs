@@ -1,4 +1,2 @@
-pub mod sensor_states;
 pub mod component;
-
-
+pub mod sensor_states;
