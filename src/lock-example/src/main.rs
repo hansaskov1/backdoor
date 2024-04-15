@@ -1,4 +1,5 @@
 use core::convert::TryInto;
+use std::io::Read;
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 use std::time::{Duration, Instant};
 
@@ -137,10 +138,19 @@ fn main() -> anyhow::Result<()> {
                             data,
                             details,
                         } => {
-                            info!(
-                                "Received event: {:#?}, topic: {:#?}, data: {:#?}, details: {:#?}",
-                                id, topic, data, details
-                            );
+                            match details {
+                                esp_idf_svc::mqtt::client::Details::Complete => {
+
+                                    let message = String::from_utf8(data.to_vec()).unwrap();
+                                    info!(
+                                        "Received event: {:#?}, topic: {:#?}, data: {:#?}, details: {:#?}",
+                                        id, topic, message, details
+                                    );
+
+
+                                },
+                                _ => {}
+                            }
                         }
                         _ => {}
                     }
