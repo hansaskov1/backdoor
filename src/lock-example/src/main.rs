@@ -1,5 +1,6 @@
 use core::convert::TryInto;
 use std::time::{Duration, Instant};
+use embedded_svc::mqtt::client::Publish;
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 
 use esp_idf_hal::gpio::{Gpio14, Gpio18, Gpio33, Gpio4};
@@ -89,12 +90,11 @@ fn run(
     std::thread::scope(|scope| {
         let message = "Hello from esp!";
         let message_bytes = message.as_bytes();
-        let sleep_duration = Duration::from_secs(2);
     
         // Values will be accesable within the state machine.
         let store = Store {
             lock,
-            door: door, 
+            door, 
             duration_in_state: Instant::now(),
         };
 
@@ -134,14 +134,12 @@ fn run(
             .build()
             .unwrap();
 
-
         std::thread::Builder::new()
             .stack_size(6000)
             .spawn_scoped(scope, || loop {
                 while let Ok(_event) = connection.next() {}
             })
             .unwrap();
-
 
         client.subscribe(topic, QoS::AtMostOnce)?;
         std::thread::sleep(Duration::from_millis(500));
@@ -150,11 +148,11 @@ fn run(
             state_machine.store.lock.step().unwrap();
             state_machine.store.door.step().unwrap();
             state_machine.trigger(Event::Step);
-            std::thread::sleep(sleep_duration);
+            client.enqueue(topic, QoS::AtMostOnce, false, message_bytes)?;
+            std::thread::sleep(Duration::from_millis(10));
         }
     })
 }
-
 
 fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()> {
 
