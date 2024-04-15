@@ -1,10 +1,9 @@
 use core::convert::TryInto;
-use embedded_svc::mqtt::client::Publish;
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 use std::time::{Duration, Instant};
 
 use esp_idf_hal::gpio::{Gpio14, Gpio18, Gpio33, Gpio4};
-use esp_idf_hal::sys::EspError;
+
 use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::log::EspLogger;
 use esp_idf_svc::mqtt::client::{EspMqttClient, EspMqttConnection, MqttClientConfiguration, QoS};
@@ -66,39 +65,37 @@ fn main() -> anyhow::Result<()> {
 
     // Configure MQTT client
     info!("About to start the MQTT client");
-    let (mut mqtt_client, mut mqtt_conn) =
+    let (mqtt_client, mut mqtt_conn) =
         EspMqttClient::new(MQTT_URL, &MqttClientConfiguration::default())?;
     info!("MQTT client connected");
 
-
     // Run event loop
     std::thread::scope(|scope| {
+        // Values will be accesable within the state machine.
 
-    // Values will be accesable within the state machine.
-     
-    let store = Store {
-        lock: Component::new(peripherals.pins.gpio18, peripherals.pins.gpio33)?,
-        door: Component::new(peripherals.pins.gpio4, peripherals.pins.gpio14)?,
-        mqtt_client: mqtt_client,
-        duration_in_state: Instant::now(),
-    };
-    info!("Created Store");   
+        let store = Store {
+            lock: Component::new(peripherals.pins.gpio18, peripherals.pins.gpio33)?,
+            door: Component::new(peripherals.pins.gpio4, peripherals.pins.gpio14)?,
+            mqtt_client: mqtt_client,
+            duration_in_state: Instant::now(),
+        };
+        info!("Created Store");
 
-    
-    let global_action = |store: &mut Store, state: &States, _: &Event| {
-        let message = format!("{:?}", state);
+        let global_action = |store: &mut Store, state: &States, _: &Event| {
+            // Publish state
+            let message = format!("{:?}", state);
+            store
+                .mqtt_client
+                .publish(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes())
+                .unwrap();
 
-        // Reset the duration in state.
-        store.mqtt_client.enqueue(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes());
+            // Update duration
+            store.duration_in_state = Instant::now();
+            log::info!("State: {:?}", state);
+        };
+        info!("Created global action");
 
-        // Log when the state changes
-        store.duration_in_state = Instant::now();
-        log::info!("State: {:?}", state);
-    };
-    info!("Created global action");  
-
-   
-    #[rustfmt::skip]
+        #[rustfmt::skip]
     let mut state_machine = StateMachineBuilder::new(store, States::Locked)
         .set_global_action(global_action)
         .state(States::Locked)
@@ -126,12 +123,28 @@ fn main() -> anyhow::Result<()> {
                 .only_if(|store| store.lock.state == LockState::Locked)
         .build()
         .unwrap();
-        info!("Created state machine");  
+        info!("Created state machine");
 
         std::thread::Builder::new()
             .stack_size(6000)
             .spawn_scoped(scope, || loop {
-                while let Ok(_event) = mqtt_conn.next() {}
+                while let Ok(event) = mqtt_conn.next() {
+                    let payload = event.payload();
+                    match payload {
+                        esp_idf_svc::mqtt::client::EventPayload::Received {
+                            id,
+                            topic,
+                            data,
+                            details,
+                        } => {
+                            info!(
+                                "Received event: {:#?}, topic: {:#?}, data: {:#?}, details: {:#?}",
+                                id, topic, data, details
+                            );
+                        }
+                        _ => {}
+                    }
+                }
             })
             .unwrap();
 
@@ -140,13 +153,10 @@ fn main() -> anyhow::Result<()> {
             .mqtt_client
             .subscribe(MQTT_TOPIC, QoS::AtMostOnce)?;
 
-        info!("Subscribed to {MQTT_TOPIC}"); 
+        info!("Subscribed to {MQTT_TOPIC}");
         std::thread::sleep(Duration::from_millis(500));
-        info!("Running Event loop"); 
+        info!("Running Event loop");
         loop {
-
-            
-
             state_machine.store.lock.step().unwrap();
             state_machine.store.door.step().unwrap();
             state_machine.trigger(Event::Step);
