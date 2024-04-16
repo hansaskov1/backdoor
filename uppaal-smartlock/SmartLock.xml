@@ -103,12 +103,12 @@ bool may_lock_state_change = false;</declaration>
 	<template>
 		<name>MQTT</name>
 		<declaration>clock heartbeat_timer = 0;</declaration>
-		<location id="id15" x="-161" y="0">
-			<name x="-212" y="-42">ReceiveState</name>
+		<location id="id15" x="-178" y="0">
+			<name x="-229" y="-42">ReceiveState</name>
 			<committed/>
 		</location>
 		<location id="id16" x="0" y="0">
-			<label kind="invariant" x="-93" y="-42">heartbeat_timer&lt;=10</label>
+			<label kind="invariant" x="-170" y="25">heartbeat_timer&lt;=10</label>
 		</location>
 		<location id="id17" x="-340" y="0">
 			<name x="-382" y="-42">SendState</name>
@@ -142,7 +142,7 @@ bool may_lock_state_change = false;</declaration>
 		<transition id="id24">
 			<source ref="id21"/>
 			<target ref="id22"/>
-			<label kind="synchronisation" x="-102" y="-119">heartbeat!</label>
+			<label kind="synchronisation" x="-102" y="-119">heartbeat?</label>
 		</transition>
 		<transition id="id25">
 			<source ref="id16"/>
@@ -193,7 +193,7 @@ bool may_lock_state_change = false;</declaration>
 		<transition id="id33">
 			<source ref="id16"/>
 			<target ref="id15"/>
-			<label kind="synchronisation" x="-127" y="-25">update_state?</label>
+			<label kind="synchronisation" x="-144" y="-25">update_state?</label>
 		</transition>
 	</template>
 	<template>
