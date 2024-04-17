@@ -1,5 +1,7 @@
 use core::convert::TryInto;
+use std::sync::mpsc;
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
+use esp_idf_hal::delay::FreeRtos;
 use std::time::{Duration, Instant};
 
 use esp_idf_hal::gpio::{Gpio14, Gpio18, Gpio33, Gpio4};
@@ -115,7 +117,7 @@ fn main() -> anyhow::Result<()> {
                 .go_to(States::Locking)
                 .only_if(|store| {
                     store.door.state == DoorState::Closed
-                    && store.duration_in_state.elapsed() > Duration::from_secs(5)
+                    && store.duration_in_state.elapsed() > Duration::from_secs(10)
                 })
         .state(States::Locking)
             .on(Event::Step)
@@ -125,9 +127,12 @@ fn main() -> anyhow::Result<()> {
         .unwrap();
         info!("Created state machine");
 
+        let (tx, rx) = mpsc::channel();
+
+
         std::thread::Builder::new()
             .stack_size(6000)
-            .spawn_scoped(scope, || loop {
+            .spawn_scoped(scope, move || loop {
                 while let Ok(event) = mqtt_conn.next() {
                     let payload = event.payload();
                     match payload {
@@ -145,6 +150,7 @@ fn main() -> anyhow::Result<()> {
                                         "Received event: {:#?}, topic: {:#?}, data: {:#?}, details: {:#?}",
                                         id, topic.unwrap(), message, details
                                     );
+                                    tx.send(message).unwrap();
 
 
                                 },
@@ -169,7 +175,23 @@ fn main() -> anyhow::Result<()> {
             state_machine.store.lock.step().unwrap();
             state_machine.store.door.step().unwrap();
             state_machine.trigger(Event::Step);
-            std::thread::sleep(Duration::from_millis(10));
+
+            let message_result = rx.try_recv();
+
+
+            match message_result {
+                Ok(message) => {
+                    if message == "OpenDoor" {
+                        state_machine.trigger(Event::OpenDoor);
+                    }
+                }
+                _ => {}
+                
+            }
+
+            // we are sleeping here to make sure the watchdog isn't triggered
+            FreeRtos::delay_ms(10);
+
         }
     })
 }
