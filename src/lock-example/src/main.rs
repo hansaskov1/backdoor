@@ -88,11 +88,10 @@ fn main() -> anyhow::Result<()> {
 
     // Run event loop
     std::thread::scope(|scope| {
-
         let mut state_machine = construct_lock_state_machine(lock, door, mqtt_client)?;
 
         let (tx, rx) = mpsc::channel();
-        
+
         std::thread::Builder::new()
             .stack_size(6000)
             .spawn_scoped(scope, move || loop {
@@ -129,17 +128,15 @@ fn main() -> anyhow::Result<()> {
         info!("Running Event loop");
         info!("Send \"OpenDoor\" to unlock the lock");
         loop {
+            let message = rx.try_recv();
+
+            if message == Ok(Event::OpenDoor) {
+                state_machine.trigger(Event::OpenDoor);
+            }
+
             state_machine.store.lock.step().unwrap();
             state_machine.store.door.step().unwrap();
             state_machine.trigger(Event::Step);
-
-            let message_result = rx.try_recv();
-
-            if let Ok(message) = message_result {
-                if message == Event::OpenDoor {
-                    state_machine.trigger(Event::OpenDoor);
-                }
-            }
 
             // we are sleeping here to make sure the watchdog isn't triggered
             FreeRtos::delay_ms(10);
@@ -168,8 +165,11 @@ fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()>
     Ok(())
 }
 
-fn construct_lock_state_machine<'a>(lock: Lock<'a>, door: Door<'a>, mqtt_client:  EspMqttClient<'a>) -> anyhow::Result<StateMachine<Event, States, Store<'a>>> {
-
+fn construct_lock_state_machine<'a>(
+    lock: Lock<'a>,
+    door: Door<'a>,
+    mqtt_client: EspMqttClient<'a>,
+) -> anyhow::Result<StateMachine<Event, States, Store<'a>>> {
     let store = Store {
         lock,
         door,
@@ -222,8 +222,7 @@ fn construct_lock_state_machine<'a>(lock: Lock<'a>, door: Door<'a>, mqtt_client:
         .build()
         .unwrap();
 
-        info!("Created state machine");
+    info!("Created state machine");
 
     return Ok(state_machine);
-
 }

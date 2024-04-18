@@ -34,7 +34,7 @@ where
 
     pub fn step(&mut self) -> anyhow::Result<()> {
         let current_reading = self.button.is_high();
-        if self.previous_reading != current_reading && current_reading == true {
+        if self.previous_reading != current_reading && current_reading {
             self.led.toggle()?;
             self.state = self.led.is_set_high().into();
         }
