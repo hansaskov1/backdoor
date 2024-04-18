@@ -98,20 +98,17 @@ fn main() -> anyhow::Result<()> {
                 while let Ok(event) = mqtt_conn.next() {
                     if let EventPayload::Received {
                         id,
-                        topic,
+                        topic: Some(topic),
                         data,
                         details: Details::Complete,
                     } = event.payload()
                     {
-                        if let Some(topic) = topic {
-                            let message = String::from_utf8(data.to_vec()).unwrap();
-                            info!("Received event: {id:#?}, topic: {topic:#?}, data: {message:#?}");
+                        let message = String::from_utf8(data.to_vec()).unwrap();
+                        info!("Received event: {id:#?}, topic: {topic:#?}, data: {message:#?}");
 
-                            let open_door = Event::from_str(message.as_str());
-
-                            if let Some(open_door) = open_door {
-                                tx.send(open_door).unwrap();
-                            }
+                        let open_door = Event::from_str(message.as_str());
+                        if let Some(open_door) = open_door {
+                            tx.send(open_door).unwrap();
                         }
                     }
                 }
@@ -128,14 +125,17 @@ fn main() -> anyhow::Result<()> {
         info!("Running Event loop");
         info!("Send \"OpenDoor\" to unlock the lock");
         loop {
+            // Check messages from MQTT
             let message = rx.try_recv();
 
+            // Trigger MQTT if message is received
             if message == Ok(Event::OpenDoor) {
                 state_machine.trigger(Event::OpenDoor);
             }
 
-            state_machine.store.lock.step().unwrap();
-            state_machine.store.door.step().unwrap();
+            // Iterate one step in state machine
+            state_machine.store.lock.step()?;
+            state_machine.store.door.step()?;
             state_machine.trigger(Event::Step);
 
             // we are sleeping here to make sure the watchdog isn't triggered
@@ -224,5 +224,5 @@ fn construct_lock_state_machine<'a>(
 
     info!("Created state machine");
 
-    return Ok(state_machine);
+    Ok(state_machine)
 }
