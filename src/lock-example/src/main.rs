@@ -1,17 +1,19 @@
 use core::convert::TryInto;
-use std::sync::mpsc;
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 use esp_idf_hal::delay::FreeRtos;
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use esp_idf_hal::gpio::{Gpio14, Gpio18, Gpio33, Gpio4};
 
 use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::log::EspLogger;
-use esp_idf_svc::mqtt::client::{EspMqttClient, MqttClientConfiguration, QoS};
+use esp_idf_svc::mqtt::client::{
+    Details, EspMqttClient, EventPayload, MqttClientConfiguration, QoS,
+};
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_svc::{eventloop::EspSystemEventLoop, nvs::EspDefaultNvsPartition};
-use fluent_state_machine::StateMachineBuilder;
+use fluent_state_machine::{StateMachine, StateMachineBuilder};
 use lock_example::component::Component;
 use lock_example::sensor_states::{DoorState, LockState};
 use log::info;
@@ -31,6 +33,15 @@ enum States {
 enum Event {
     OpenDoor,
     Step,
+}
+
+impl Event {
+    fn from_str(s: &str) -> Option<Event> {
+        match s {
+            "OpenDoor" => Some(Event::OpenDoor),
+            _ => None,
+        }
+    }
 }
 
 struct Store<'a> {
@@ -71,93 +82,38 @@ fn main() -> anyhow::Result<()> {
         EspMqttClient::new(MQTT_URL, &MqttClientConfiguration::default())?;
     info!("MQTT client connected");
 
+    // Crate IO components
+    let lock = Component::new(peripherals.pins.gpio18, peripherals.pins.gpio33)?;
+    let door = Component::new(peripherals.pins.gpio4, peripherals.pins.gpio14)?;
+
     // Run event loop
     std::thread::scope(|scope| {
-        // Values will be accesable within the state machine.
 
-        let store = Store {
-            lock: Component::new(peripherals.pins.gpio18, peripherals.pins.gpio33)?,
-            door: Component::new(peripherals.pins.gpio4, peripherals.pins.gpio14)?,
-            mqtt_client: mqtt_client,
-            duration_in_state: Instant::now(),
-        };
-        info!("Created Store");
-
-        let global_action = |store: &mut Store, state: &States, _: &Event| {
-            // Publish state
-            let message = format!("{:?}", state);
-            store
-                .mqtt_client
-                .publish(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes())
-                .unwrap();
-
-            // Update duration
-            store.duration_in_state = Instant::now();
-            log::info!("State: {:?}", state);
-        };
-        info!("Created global action");
-
-        #[rustfmt::skip]
-    let mut state_machine = StateMachineBuilder::new(store, States::Locked)
-        .set_global_action(global_action)
-        .state(States::Locked)
-            .on(Event::OpenDoor)
-                .go_to(States::Unlocking)
-        .state(States::Unlocking)
-            .on(Event::Step)
-                .go_to(States::Unlocked)
-                .only_if(|store| store.lock.state == LockState::Unlocked)
-            .on(Event::Step)
-                .go_to(States::Locked)
-                .only_if(|store| {
-                    store.duration_in_state.elapsed() > Duration::from_secs(10) 
-                    && store.door.state == DoorState::Closed})
-        .state(States::Unlocked)
-            .on(Event::Step)
-                .go_to(States::Locking)
-                .only_if(|store| {
-                    store.door.state == DoorState::Closed
-                    && store.duration_in_state.elapsed() > Duration::from_secs(10)
-                })
-        .state(States::Locking)
-            .on(Event::Step)
-                .go_to(States::Locked)
-                .only_if(|store| store.lock.state == LockState::Locked)
-        .build()
-        .unwrap();
-        info!("Created state machine");
+        let mut state_machine = construct_lock_state_machine(lock, door, mqtt_client)?;
 
         let (tx, rx) = mpsc::channel();
-
-
+        
         std::thread::Builder::new()
             .stack_size(6000)
             .spawn_scoped(scope, move || loop {
                 while let Ok(event) = mqtt_conn.next() {
-                    let payload = event.payload();
-                    match payload {
-                        esp_idf_svc::mqtt::client::EventPayload::Received {
-                            id,
-                            topic,
-                            data,
-                            details,
-                        } => {
-                            match details {
-                                esp_idf_svc::mqtt::client::Details::Complete => {
+                    if let EventPayload::Received {
+                        id,
+                        topic,
+                        data,
+                        details: Details::Complete,
+                    } = event.payload()
+                    {
+                        if let Some(topic) = topic {
+                            let message = String::from_utf8(data.to_vec()).unwrap();
+                            info!("Received event: {id:#?}, topic: {topic:#?}, data: {message:#?}");
 
-                                    let message = String::from_utf8(data.to_vec()).unwrap();
-                                    info!(
-                                        "Received event: {:#?}, topic: {:#?}, data: {:#?}, details: {:#?}",
-                                        id, topic.unwrap(), message, details
-                                    );
-                                    tx.send(message).unwrap();
+                            let open_door = Event::from_str(message.as_str());
 
-
-                                },
-                                _ => {}
+                            if let Some(open_door) = open_door {
+                                tx.send(open_door).unwrap();
                             }
                         }
-                        _ => {}
                     }
                 }
             })
@@ -171,6 +127,7 @@ fn main() -> anyhow::Result<()> {
         info!("Subscribed to {MQTT_TOPIC}");
         std::thread::sleep(Duration::from_millis(500));
         info!("Running Event loop");
+        info!("Send \"OpenDoor\" to unlock the lock");
         loop {
             state_machine.store.lock.step().unwrap();
             state_machine.store.door.step().unwrap();
@@ -178,20 +135,14 @@ fn main() -> anyhow::Result<()> {
 
             let message_result = rx.try_recv();
 
-
-            match message_result {
-                Ok(message) => {
-                    if message == "OpenDoor" {
-                        state_machine.trigger(Event::OpenDoor);
-                    }
+            if let Ok(message) = message_result {
+                if message == Event::OpenDoor {
+                    state_machine.trigger(Event::OpenDoor);
                 }
-                _ => {}
-                
             }
 
             // we are sleeping here to make sure the watchdog isn't triggered
             FreeRtos::delay_ms(10);
-
         }
     })
 }
@@ -215,4 +166,64 @@ fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()>
     info!("Wifi netif up");
 
     Ok(())
+}
+
+fn construct_lock_state_machine<'a>(lock: Lock<'a>, door: Door<'a>, mqtt_client:  EspMqttClient<'a>) -> anyhow::Result<StateMachine<Event, States, Store<'a>>> {
+
+    let store = Store {
+        lock,
+        door,
+        mqtt_client,
+        duration_in_state: Instant::now(),
+    };
+
+    info!("Created Store");
+
+    let global_action = |store: &mut Store, state: &States, _: &Event| {
+        // Publish state
+        let message = format!("{:?}", state);
+        store
+            .mqtt_client
+            .publish(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes())
+            .unwrap();
+
+        // Update duration
+        store.duration_in_state = Instant::now();
+        log::info!("State: {:?}", state);
+    };
+    info!("Created global action");
+
+    #[rustfmt::skip]
+    let state_machine = StateMachineBuilder::new(store, States::Locked)
+        .set_global_action(global_action)
+        .state(States::Locked)
+            .on(Event::OpenDoor)
+                .go_to(States::Unlocking)
+        .state(States::Unlocking)
+            .on(Event::Step)
+                .go_to(States::Unlocked)
+                .only_if(|store| store.lock.state == LockState::Unlocked)
+            .on(Event::Step)
+                .go_to(States::Locked)
+                .only_if(|store| {
+                    store.duration_in_state.elapsed() > Duration::from_secs(10)
+                    && store.door.state == DoorState::Closed})
+        .state(States::Unlocked)
+            .on(Event::Step)
+                .go_to(States::Locking)
+                .only_if(|store| {
+                    store.door.state == DoorState::Closed
+                    && store.duration_in_state.elapsed() > Duration::from_secs(10)
+                })
+        .state(States::Locking)
+            .on(Event::Step)
+                .go_to(States::Locked)
+                .only_if(|store| store.lock.state == LockState::Locked)
+        .build()
+        .unwrap();
+
+        info!("Created state machine");
+
+    return Ok(state_machine);
+
 }
