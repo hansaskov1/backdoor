@@ -20,3 +20,12 @@ bun run dev
 Open http://localhost:3000/ with your browser to see the result.
 
 docker run -d --hostname my-rabbit --name some-rabbit -e RABBITMQ_DEFAULT_USER=user -e RABBITMQ_DEFAULT_PASS=password rabbitmq:3-management
+
+## Setup producer and consumer test
+```bash
+bun run producer
+```
+
+```bash
+bun run consumer
+```
