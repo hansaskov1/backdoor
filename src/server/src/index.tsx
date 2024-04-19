@@ -11,6 +11,10 @@ enum State {
 
 let currentState = State.locked;
 
+const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
+
+const client = connect('mqtt://localhost:1883');
+
 const app = new Elysia()
 	.use(html())
 	.get('/', () => {
@@ -23,10 +27,16 @@ const app = new Elysia()
 				>
 					Hello
 				</div>
-
-				<button id="command" hx-post="/send_command" hx-trigger="click">
-					Unlock Door
-				</button>
+				<div>
+					<button
+						id="command"
+						class="btn btn-primary"
+						hx-post="/send_command"
+						hx-trigger="click"
+					>
+						Unlock Door
+					</button>
+				</div>
 			</BaseHtml>
 		);
 	})
@@ -42,20 +52,16 @@ const app = new Elysia()
 		);
 	});
 
-const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
-
-const client = connect('mqtt://localhost:1883');
-
 function updateState() {
 	if (currentState === State.locked) {
 		return (
-			<div id="state" hx-get="/update-state" hx-trigger="every 3 seconds">
+			<div id="state" hx-get="/update-state" hx-trigger="every 2 seconds">
 				Locked
 			</div>
 		);
 	} else {
 		return (
-			<div id="state" hx-get="/update-state" hx-trigger="every 3 seconds">
+			<div id="state" hx-get="/update-state" hx-trigger="every 2 seconds">
 				Unlocked
 			</div>
 		);

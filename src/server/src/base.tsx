@@ -20,7 +20,7 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 
 		<body>
 			<header>
-				<nav class="navbar bg-base-300">
+				<nav class="navbar bg-primary text-primary-content">
 					<div class="flex-1">
 						<a class="btn btn-ghost normal-case text-xl">
 							Door lock
@@ -45,7 +45,21 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 				</nav>
 			</header>
 
-			<main class="container mx-auto">{children}</main>
+			<main
+				class="container mx-auto"
+				style="display: flex; justify-content: center; align-items: center; height: 100vh;"
+			>
+				<div class="card w-96 bg-neutral text-neutral-content">
+					<div class="card-body items-center text-center">
+						<h1 class="text-3xl">Main entrance</h1>
+						<div>
+							<p>3. 35</p>
+							<p>Sebastian Revsbech Christensen</p>
+						</div>
+						{children}
+					</div>
+				</div>
+			</main>
 		</body>
 	</html>
 );
