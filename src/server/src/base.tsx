@@ -1,4 +1,4 @@
-export const BaseHtml = ({ children, username }: { children: JSX.Element |undefined | {}; username?: string }) => {
+export const BaseHtml = ({ children, username, apartment }: { children: JSX.Element |undefined | {}; username?: string; apartment?: string }) => {
 // This line exports the component named BaseHtml so it can be imported and used elsewhere in your code.
 // the component expects a single prop called children, which can either be undefined or an object.
 
@@ -46,7 +46,7 @@ export const BaseHtml = ({ children, username }: { children: JSX.Element |undefi
 					<div class="card-body items-center text-center h-full flex flex-col justify-center">
 						<h1 class="text-3xl">Main entrance</h1>
 						<div>
-							<p>Apartment 3. 35</p>
+							<p>Apartment: {apartment}</p>
 							<p>Name: {username}</p>
 						</div>
 						{children}
@@ -98,11 +98,11 @@ export const Login = () => {
                 <form class="w-80" hx-post="/login" hx-target=".error" hx-swap="innerHTML">
                     <div class="mb-4">
                         <label for="username" class="block text-white-700">Username:</label>
-                        <input type="text" id="username" name="username" class="form-input mt-1 block w-full" />
+                        <input type="text" id="username" name="username" class="form-input mt-1 block w-full text-black" />
                     </div>
                     <div class="mb-6">
                         <label for="password" class="block text-white-700">Password:</label>
-                        <input type="password" id="password" name="password" class="form-input mt-1 block w-full" />
+                        <input type="password" id="password" name="password" class="form-input mt-1 block w-full text-black" />
                     </div>
                     <button type="submit" class="btn btn-primary px-6 py-3 w-full">Login</button>
                     <p class="text-red-500 mt-4 text-center error"></p>

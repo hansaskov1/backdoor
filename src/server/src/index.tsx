@@ -17,16 +17,28 @@ const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 
 const client = connect('mqtt://localhost:1883');
 
-// this is sample users, you should use a database in production
+// this is sample users, we should use a database in production
 const users = [
 	{
 	  username: "admin",
 	  password: await Bun.password.hash("admin"),
+	  apartment: "2TH"
 	},
 	{
 	  username: "user",
 	  password: await Bun.password.hash("user"),
+	  apartment: "4ST"
 	},
+	{
+	  username: "simone",
+	  password: await Bun.password.hash("simone"),
+	  apartment: "4ST"
+	},
+	{
+		username: "hans",
+		password: await Bun.password.hash("hans"),
+		apartment: "4ST"
+	  }
   ];
 
 const Message = ({ count }: { count: number }) => (
@@ -64,7 +76,7 @@ const app = new Elysia()
             const user = users.find((user) => user.username === username);
 
             if (user && (await Bun.password.verify(password, user.password))) {
-                const token = await jwt.sign({ username });
+                const token = await jwt.sign({ username, apartment: user.apartment });
 
                 auth.set({
                     value: token,
@@ -90,39 +102,42 @@ const app = new Elysia()
         set.redirect = "/";
     })
     .get('/home', async ({ jwt, cookie: { auth } }) => {
-		const authCookie = await jwt.verify(auth.value);
-		const username = authCookie ? authCookie.username.toString() : undefined;
-		return authCookie ? (
-			<BaseHtml username={username}>
-				<div
-					id="state"
-					hx-get="/update-state"
-					hx-trigger="every 2 seconds"
-				>
-				</div>
-				<div 
-					id="countdown" 
-					hx-ext="ws"
-					ws-connect="/ws"
-					hx-trigger="click from:#command"
-				>
-						<Message count={10} />
-				</div>
-				<div>
-					<button
-						id="command"
-						class="btn btn-primary py--6 px-12 text-4xl"
-						hx-post="/send_command"
-						hx-trigger="click"
-					>
-						Unlock Door
-					</button>
-				</div>
-			</BaseHtml>
-		) : (
-			<Login /> // Redirect to login page if user is not authenticated
-		);
-	})
+    const authCookie = await jwt.verify(auth.value);
+    if (!authCookie) {
+        return <Login />; // Redirect to login page if user is not authenticated
+    }
+    const username = authCookie.username.toString();
+    const apartment = authCookie.apartment ? authCookie.apartment.toString() : undefined;
+    return (
+        <BaseHtml username={username} apartment={apartment}>
+            <div
+                id="state"
+                hx-get="/update-state"
+                hx-trigger="every 2 seconds"
+            >
+            </div>
+            <div 
+                id="countdown" 
+                hx-ext="ws"
+                ws-connect="/ws"
+                hx-trigger="click from:#command"
+            >
+                    <Message count={10} />
+            </div>
+            <div>
+                <button
+                    id="command"
+                    class="btn btn-primary py--6 px-12 text-4xl"
+                    hx-post="/send_command"
+                    hx-trigger="click"
+                >
+                    Unlock Door
+                </button>
+            </div>
+        </BaseHtml>
+    );
+})
+
     .get('update-state', () => {
         return updateState();
     })
