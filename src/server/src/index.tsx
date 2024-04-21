@@ -15,9 +15,11 @@ const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 
 const client = connect('mqtt://localhost:1883');
 
+let countdownStarted = false;
+
 const app = new Elysia()
 	.use(html())
-	.get('/', () => {
+	.get('/', ({html}) => {
 		return (
 			<BaseHtml>
 				<div
@@ -25,12 +27,17 @@ const app = new Elysia()
 					hx-get="/update-state"
 					hx-trigger="every 2 seconds"
 				>
-					Hello
+				</div>
+				<div 
+					id="countdown" 
+					hx-get="/countdown" 
+					hx-trigger="state:unlocked from:body"
+				>
 				</div>
 				<div>
 					<button
 						id="command"
-						class="btn btn-primary"
+						class="btn btn-primary py--6 px-12 text-4xl"
 						hx-post="/send_command"
 						hx-trigger="click"
 					>
@@ -43,14 +50,45 @@ const app = new Elysia()
 	.get('update-state', () => {
 		return updateState();
 	})
+	.get('countdown', () => {
+
+	})
 	.post('send_command', () => {
-		publishMessage();
+		publishMessage('OpenDoor'); // Publish "OpenDoor" command
+		let timeTaken = Math.random() * 1000;
+		console.log("Time taken: ", timeTaken);
+		setTimeout(() => {
+			// Update the state immediately after sending the command
+			currentState = State.unlocked;
+			startCountdown(10); // Start the countdown from 10 seconds
+		}, timeTaken); // Wait for a random time before updating the state
+	
+		setTimeout(() => {
+			// go back to the locked state after 10 s
+			currentState = State.locked;
+			publishMessage('CloseDoor'); // Publish "CloseDoor" command
+		}, 10000);
+	
 		return (
-			<button id="command" hx-post="/send_command" hx-trigger="click">
+			<button id="command" hx-post="/send_command" hx-trigger="click" hx-vals="true" disabled={currentState === State.unlocked}>
 				Unlock Door
 			</button>
 		);
 	});
+
+let countdownInterval: number | Timer;
+
+const startCountdown = (remainingTime: number) => {
+    if (remainingTime >= 0) {
+        console.log(`Time remaining: ${remainingTime}`);
+        setTimeout(() => {
+            startCountdown(remainingTime - 1);
+        }, 1000); // Wait for 1 second
+    } else {
+        console.log("Countdown finished");
+    }
+};
+
 
 function updateState() {
 	if (currentState === State.locked) {
@@ -104,14 +142,14 @@ function connectToBroker() {
 	});
 }
 
-function publishMessage() {
-	client.publish('hello', 'OpenDoor', { qos: 1 }, error => {
-		if (error) {
-			console.error(`Error publishing message: ${error}`);
-		} else {
-			console.log(`Published message: OpenDoor`);
-		}
-	});
+function publishMessage(command: string) {
+    client.publish('hello', command, { qos: 1 }, error => {
+        if (error) {
+            console.error(`Error publishing message: ${error}`);
+        } else {
+            console.log(`Published message: ${command}`);
+        }
+    });
 }
 
 const start = () => {

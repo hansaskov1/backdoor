@@ -1,4 +1,6 @@
 export const BaseHtml = ({ children }: { children: undefined | {} }) => (
+// This line exports the component named BaseHtml so it can be imported and used elsewhere in your code.
+// the component expects a single prop called children, which can either be undefined or an object.
 	<html lang="en">
 		<head>
 			<meta charset="utf-8" />
@@ -8,7 +10,7 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 			/>
 			<title>Smart lock</title>
 			<script src="https://unpkg.com/htmx.org@1.9.6"></script>
-			<script src="https://unpkg.com/htmx.org@1.9.11/dist/ext/ws.js"></script>
+			<script src="https://unpkg.com/htmx.org@1.9.11/dist/ext/ws.js"></script> 
 			<link
 				href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css"
 				rel="stylesheet"
@@ -26,7 +28,7 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 							Door lock
 						</a>
 					</div>
-					<div class="flex-none">
+					<div class="flex-none"> {/*user icon button*/}
 						<button class="btn btn-square btn-ghost">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -49,11 +51,11 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 				class="container mx-auto"
 				style="display: flex; justify-content: center; align-items: center; height: 100vh;"
 			>
-				<div class="card w-96 bg-neutral text-neutral-content">
-					<div class="card-body items-center text-center">
+				<div class="card w-96 bg-neutral text-neutral-content h-1/2">
+					<div class="card-body items-center text-center h-full flex flex-col justify-center">
 						<h1 class="text-3xl">Main entrance</h1>
 						<div>
-							<p>3. 35</p>
+							<p>Apartment 3. 35</p>
 							<p>Sebastian Revsbech Christensen</p>
 						</div>
 						{children}
