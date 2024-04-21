@@ -1,7 +1,9 @@
-export const BaseHtml = ({ children }: { children: undefined | {} }) => (
+export const BaseHtml = ({ children, username }: { children: JSX.Element |undefined | {}; username?: string }) => {
 // This line exports the component named BaseHtml so it can be imported and used elsewhere in your code.
 // the component expects a single prop called children, which can either be undefined or an object.
-	<html lang="en">
+
+	return (
+		<html lang="en">
 		<head>
 			<meta charset="utf-8" />
 			<meta
@@ -20,7 +22,7 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 			<script></script>
 		</head>
 
-		<body>
+		<body id="main">
 			<header>
 				<nav class="navbar bg-primary text-primary-content">
 					<div class="flex-1">
@@ -28,22 +30,11 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 							Door lock
 						</a>
 					</div>
-					<div class="flex-none"> {/*user icon button*/}
-						<button class="btn btn-square btn-ghost">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								class="w-6 h-6"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</button>
-					</div>
+					<div class="flex-none"> {/*logout button*/}
+                        <a href="/logout" class="btn btn-square btn-ghost">
+                            Logout
+                        </a>
+                    </div>
 				</nav>
 			</header>
 
@@ -56,7 +47,7 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 						<h1 class="text-3xl">Main entrance</h1>
 						<div>
 							<p>Apartment 3. 35</p>
-							<p>Sebastian Revsbech Christensen</p>
+							<p>Name: {username}</p>
 						</div>
 						{children}
 					</div>
@@ -64,4 +55,94 @@ export const BaseHtml = ({ children }: { children: undefined | {} }) => (
 			</main>
 		</body>
 	</html>
-);
+	);
+};
+
+export const Login = () => {
+    return (
+        <html lang="en">
+            <head>
+                <meta charset="utf-8" />
+                <meta
+                    name="viewport"
+                    content="width=device-width, initial-scale=1.0"
+                />
+                <title>Login - Smart lock</title>
+                <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+                <link
+                    href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css"
+                    rel="stylesheet"
+                    type="text/css"
+                />
+                <script src="https://cdn.tailwindcss.com"></script>
+            </head>
+
+            <body id="main">
+                <header>
+                    <nav class="navbar bg-primary text-primary-content">
+                        <div class="flex-1">
+                            <a class="btn btn-ghost normal-case text-xl">
+                                Door lock
+                            </a>
+                        </div>
+                    </nav>
+                </header>
+
+                <main
+                    class="container mx-auto"
+                    style="display: flex; justify-content: center; align-items: center; height: 100vh;"
+                >
+                    <div class="card w-96 bg-neutral text-neutral-content h-1/2">
+					<div class="flex flex-col items-center justify-center h-full">
+                <h1 class="text-3xl font-bold mb-4">Login</h1>
+                <form class="w-80" hx-post="/login" hx-target=".error" hx-swap="innerHTML">
+                    <div class="mb-4">
+                        <label for="username" class="block text-white-700">Username:</label>
+                        <input type="text" id="username" name="username" class="form-input mt-1 block w-full" />
+                    </div>
+                    <div class="mb-6">
+                        <label for="password" class="block text-white-700">Password:</label>
+                        <input type="password" id="password" name="password" class="form-input mt-1 block w-full" />
+                    </div>
+                    <button type="submit" class="btn btn-primary px-6 py-3 w-full">Login</button>
+                    <p class="text-red-500 mt-4 text-center error"></p>
+                </form>
+            </div>
+                    </div>
+                </main>
+            </body>
+        </html>
+    );
+};
+
+
+  
+  export const Logged = () => {
+	return (
+	  <BaseHtml>
+		<h1>Login</h1>
+		<p>You are already logged in</p>
+		<a href="/logout">Logout</a>
+	  </BaseHtml>
+	);
+  };
+  
+  export const NotLogged = () => {
+	return (
+	  <BaseHtml>
+		<h1>Protected route</h1>
+		<p>Hi, you are not logged in</p>
+		<a href="/login">Login</a>
+	  </BaseHtml>
+	);
+  };
+  
+  export const Protected = ({ username }: { username: string }) => {
+	return (
+	  <BaseHtml>
+		<h1>Protected route</h1>
+		<p>Hi {username}</p>
+		<a href="/logout">Logout</a>
+	  </BaseHtml>
+	);
+  };

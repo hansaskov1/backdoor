@@ -3,6 +3,8 @@ import { html } from '@elysiajs/html';
 import { BaseHtml } from './base';
 import { connect } from 'mqtt';
 import { stdin, stdout } from 'process';
+import { jwt } from "@elysiajs/jwt";
+import { Protected, NotLogged, Logged, Login } from "./base";
 
 enum State {
 	locked,
@@ -15,13 +17,83 @@ const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 
 const client = connect('mqtt://localhost:1883');
 
-let countdownStarted = false;
+// this is sample users, you should use a database in production
+const users = [
+	{
+	  username: "admin",
+	  password: await Bun.password.hash("admin"),
+	},
+	{
+	  username: "user",
+	  password: await Bun.password.hash("user"),
+	},
+  ];
+
+const Message = ({ count }: { count: number }) => (
+	<p id="message">
+		Time to lock: {count}
+	</p>
+)
 
 const app = new Elysia()
-	.use(html())
-	.get('/', ({html}) => {
-		return (
-			<BaseHtml>
+    .use(html())
+    .use(
+        jwt({
+            name: "jwt",
+            // This is a secret key, you should change it in production
+            secret: "your secret",
+        })
+    )
+    .get("/", async ({ jwt, cookie: { auth } }) => {
+        const authCookie = await jwt.verify(auth.value);
+        return authCookie ? <Logged /> : <Login />;
+    })
+    .get("/protected", async ({ jwt, cookie: { auth } }) => {
+        const authCookie = await jwt.verify(auth.value);
+        return authCookie ? (
+            <Protected username={authCookie.username.toString()} />
+        ) : (
+            <NotLogged />
+        );
+    })
+    .post(
+        "/login",
+        async ({ jwt, body, set, cookie: { auth } }) => {
+            const { password, username } = body;
+
+            const user = users.find((user) => user.username === username);
+
+            if (user && (await Bun.password.verify(password, user.password))) {
+                const token = await jwt.sign({ username });
+
+                auth.set({
+                    value: token,
+                    httpOnly: true,
+                });
+
+                set.headers = {
+                    "Hx-redirect": "/home", // Redirect to home page after successful login
+                };
+                return "Login successful!";
+            }
+            return "Invalid credentials";
+        },
+        {
+            body: t.Object({
+                username: t.String(),
+                password: t.String(),
+            }),
+        }
+    )
+    .get("/logout", ({ set, cookie: { auth } }) => {
+        auth.remove();
+        set.redirect = "/";
+    })
+    .get('/home', async ({ jwt, cookie: { auth } }) => {
+		const authCookie = await jwt.verify(auth.value);
+		const username = authCookie ? authCookie.username.toString() : undefined;
+		return authCookie ? (
+			<BaseHtml username={username}>
 				<div
 					id="state"
 					hx-get="/update-state"
@@ -30,9 +102,11 @@ const app = new Elysia()
 				</div>
 				<div 
 					id="countdown" 
-					hx-get="/countdown" 
-					hx-trigger="state:unlocked from:body"
+					hx-ext="ws"
+					ws-connect="/ws"
+					hx-trigger="click from:#command"
 				>
+						<Message count={10} />
 				</div>
 				<div>
 					<button
@@ -45,14 +119,33 @@ const app = new Elysia()
 					</button>
 				</div>
 			</BaseHtml>
+		) : (
+			<Login /> // Redirect to login page if user is not authenticated
 		);
 	})
-	.get('update-state', () => {
-		return updateState();
-	})
-	.get('countdown', () => {
+    .get('update-state', () => {
+        return updateState();
+    })
+    .get('countdown', () => {
 
-	})
+    })
+    .ws('/ws', {
+        open(ws) {
+            console.log('WebSocket connection opened');
+            let count = 10;
+            const interval = setInterval(() => {
+                if (count >= 0) {
+                    ws.send(<Message count={count} />);
+                    count--;
+                } else {
+                    clearInterval(interval); // Stop the interval when count reaches 0
+                    count = 10;
+                    ws.send(<Message count={count} />);
+                }
+            }, 1000);
+        },
+    })
+    .listen(3000)
 	.post('send_command', () => {
 		publishMessage('OpenDoor'); // Publish "OpenDoor" command
 		let timeTaken = Math.random() * 1000;
