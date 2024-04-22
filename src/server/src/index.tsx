@@ -143,9 +143,6 @@ const app = new Elysia()
     .get('update-state', () => {
         return updateState();
     })
-    .get('countdown', () => {
-
-    })
     .ws('/ws', {
         open(ws) {
             console.log('WebSocket connection opened');
@@ -186,35 +183,22 @@ const app = new Elysia()
 		);
 	});
 
-let countdownInterval: number | Timer;
 
-const startCountdown = (remainingTime: number) => {
+function sleep(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
+const startCountdown = async (remainingTime: number) => {
     if (remainingTime >= 0) {
         console.log(`Time remaining: ${remainingTime}`);
-        setTimeout(() => {
-            startCountdown(remainingTime - 1);
-        }, 1000); // Wait for 1 second
+        await sleep(1000)
+        startCountdown(remainingTime - 1);
+
     } else {
         console.log("Countdown finished");
     }
 };
 
-
-function updateState() {
-	if (currentState === State.locked) {
-		return (
-			<div id="state" hx-get="/update-state" hx-trigger="every 2 seconds">
-				Locked
-			</div>
-		);
-	} else {
-		return (
-			<div id="state" hx-get="/update-state" hx-trigger="every 2 seconds">
-				Unlocked
-			</div>
-		);
-	}
-}
 
 function connectToBroker() {
 	client.on('error', err => {
