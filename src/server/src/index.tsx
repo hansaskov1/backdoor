@@ -183,7 +183,7 @@ const startCountdown = (remainingTime: number) => {
 
 
 function publishMessage(command: string) {
-    console.log("Publishing Openfoor")
+    console.log("Publishing Opendoor")
     client.publish('hello', command, { qos: 1 }, error => {
         if (error) {
             console.error(`Error publishing message: ${error}`);
