@@ -8,8 +8,6 @@ import { Logged, Login } from "./base";
 
 type EnumState = "locked" | "unlocked"
 
-let currentState: EnumState = "locked";
-
 const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 
 const client = connect('mqtt://localhost:1883');
@@ -145,7 +143,7 @@ const app = new Elysia()
     .ws('/ws', {
         open(ws) {
             console.log('WebSocket connection opened');
-            
+
             // When a message is recieved from MQTT do something. 
             client.on('message', (topic, message, packet) => {
                 console.log(
@@ -156,7 +154,17 @@ const app = new Elysia()
                         ws.send(<State state='locked' />)
                         break;
                     case 'unlocked':
-                        ws.send( <State state='unlocked' />)
+                        ws.send(<State state='unlocked' />)
+
+                        let secondsLeft = 10
+                        const interval = setInterval(() => {
+                            ws.send(<Message count={secondsLeft} />)
+                        }, 1000)
+
+
+                        setTimeout(() => {
+                            clearInterval(interval)
+                        }, 10000)
                         break;
                     default:
                         console.log('message not important');
@@ -166,20 +174,9 @@ const app = new Elysia()
     })
     .post('/send_command', () => {
         publishMessage('OpenDoor'); // Publish "OpenDoor" command
-        return
     });
 
 
-const startCountdown = (remainingTime: number) => {
-    if (remainingTime >= 0) {
-        console.log(`Time remaining: ${remainingTime}`);
-        setTimeout(() => {
-            startCountdown(remainingTime - 1);
-        }, 1000); // Wait for 1 second
-    } else {
-        console.log("Countdown finished");
-    }
-};
 
 
 function publishMessage(command: string) {
