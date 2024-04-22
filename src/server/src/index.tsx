@@ -4,7 +4,7 @@ import { BaseHtml } from './base';
 import { connect } from 'mqtt';
 import { stdin, stdout } from 'process';
 import { jwt } from "@elysiajs/jwt";
-import { Protected, NotLogged, Logged, Login } from "./base";
+import { Logged, Login } from "./base";
 
 enum State {
 	locked,
@@ -56,17 +56,15 @@ const app = new Elysia()
             secret: "your secret",
         })
     )
-    .get("/", async ({ jwt, cookie: { auth } }) => {
+    .get("/", async ({ set, jwt, cookie: { auth } }) => {
         const authCookie = await jwt.verify(auth.value);
-        return authCookie ? <Logged /> : <Login />;
-    })
-    .get("/protected", async ({ jwt, cookie: { auth } }) => {
-        const authCookie = await jwt.verify(auth.value);
-        return authCookie ? (
-            <Protected username={authCookie.username.toString()} />
-        ) : (
-            <NotLogged />
-        );
+
+        if (authCookie) {
+            set.redirect = "/home"
+            return
+        }
+
+        return <Login />;
     })
     .post(
         "/login",
@@ -86,9 +84,12 @@ const app = new Elysia()
                 set.headers = {
                     "Hx-redirect": "/home", // Redirect to home page after successful login
                 };
-                return "Login successful!";
+
+                set.status = "Accepted"
+
             }
-            return "Invalid credentials";
+
+            set.status = "Unauthorized"
         },
         {
             body: t.Object({
@@ -101,10 +102,11 @@ const app = new Elysia()
         auth.remove();
         set.redirect = "/";
     })
-    .get('/home', async ({ jwt, cookie: { auth } }) => {
+    .get('/home', async ({ set, jwt, cookie: { auth } }) => {
     const authCookie = await jwt.verify(auth.value);
     if (!authCookie) {
-        return <Login />; // Redirect to login page if user is not authenticated
+        set.redirect = "/"; // Redirect to login page if user is not authenticated
+        return  
     }
     const username = authCookie.username.toString();
     const apartment = authCookie.apartment ? authCookie.apartment.toString() : undefined;

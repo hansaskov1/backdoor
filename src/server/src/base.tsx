@@ -126,23 +126,3 @@ export const Login = () => {
 	  </BaseHtml>
 	);
   };
-  
-  export const NotLogged = () => {
-	return (
-	  <BaseHtml>
-		<h1>Protected route</h1>
-		<p>Hi, you are not logged in</p>
-		<a href="/login">Login</a>
-	  </BaseHtml>
-	);
-  };
-  
-  export const Protected = ({ username }: { username: string }) => {
-	return (
-	  <BaseHtml>
-		<h1>Protected route</h1>
-		<p>Hi {username}</p>
-		<a href="/logout">Logout</a>
-	  </BaseHtml>
-	);
-  };
