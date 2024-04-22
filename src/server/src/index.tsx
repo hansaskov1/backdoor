@@ -131,7 +131,7 @@ const app = new Elysia()
                     id="command"
                     class="btn btn-primary py--6 px-12 text-4xl"
                     hx-post="/send_command"
-                    hx-trigger="click"
+                    hx-swap="none"
                 >
                     Unlock Door
                 </button>
@@ -160,45 +160,40 @@ const app = new Elysia()
         },
     })
     .listen(3000)
-	.post('send_command', () => {
+	.post('/send_command', () => {
 		publishMessage('OpenDoor'); // Publish "OpenDoor" command
-		let timeTaken = Math.random() * 1000;
-		console.log("Time taken: ", timeTaken);
-		setTimeout(() => {
-			// Update the state immediately after sending the command
-			currentState = State.unlocked;
-			startCountdown(10); // Start the countdown from 10 seconds
-		}, timeTaken); // Wait for a random time before updating the state
-	
-		setTimeout(() => {
-			// go back to the locked state after 10 s
-			currentState = State.locked;
-			publishMessage('CloseDoor'); // Publish "CloseDoor" command
-		}, 10000);
-	
-		return (
-			<button id="command" hx-post="/send_command" hx-trigger="click" hx-vals="true" disabled={currentState === State.unlocked}>
-				Unlock Door
-			</button>
-		);
+        return
 	});
 
+let countdownInterval: number | Timer;
 
-function sleep(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
-}
-
-const startCountdown = async (remainingTime: number) => {
+const startCountdown = (remainingTime: number) => {
     if (remainingTime >= 0) {
         console.log(`Time remaining: ${remainingTime}`);
-        await sleep(1000)
-        startCountdown(remainingTime - 1);
-
+        setTimeout(() => {
+            startCountdown(remainingTime - 1);
+        }, 1000); // Wait for 1 second
     } else {
         console.log("Countdown finished");
     }
 };
 
+
+function updateState() {
+	if (currentState === State.locked) {
+		return (
+			<div id="state" hx-get="/update-state" hx-trigger="every 2 seconds">
+				Locked
+			</div>
+		);
+	} else {
+		return (
+			<div id="state" hx-get="/update-state" hx-trigger="every 2 seconds">
+				Unlocked
+			</div>
+		);
+	}
+}
 
 function connectToBroker() {
 	client.on('error', err => {
