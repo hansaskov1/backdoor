@@ -48,7 +48,8 @@ struct Store<'a> {
     lock: Lock<'a>,
     door: Door<'a>,
     mqtt_client: EspMqttClient<'a>,
-    duration_in_state: Instant,
+    time_at_statechange: Instant,
+    time_at_sendstate: Instant
 }
 
 // NOTICE: Change this to your WiFi network SSID
@@ -56,7 +57,7 @@ const SSID: &str = "hansaskov";
 const PASSWORD: &str = "hansaskov";
 
 // NOTICE: Change this to your MQTT broker URL, make sure the broker is on the same network as you
-const MQTT_URL: &str = "mqtt://192.168.0.48:1883";
+const MQTT_URL: &str = "mqtt://192.168.232.62:1883";
 const MQTT_TOPIC: &str = "hello";
 
 fn main() -> anyhow::Result<()> {
@@ -133,6 +134,18 @@ fn main() -> anyhow::Result<()> {
                 state_machine.trigger(Event::OpenDoor);
             }
 
+            if state_machine.store.time_at_sendstate.elapsed().as_secs() > 10 {
+
+                let message = format!("{:?}", state_machine.state);
+
+                state_machine.store
+                    .mqtt_client
+                    .publish(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes())
+                    .unwrap();
+    
+                state_machine.store.time_at_sendstate = Instant::now();
+            }
+
             // Iterate one step in state machine
             state_machine.store.lock.step()?;
             state_machine.store.door.step()?;
@@ -174,7 +187,8 @@ fn construct_lock_state_machine<'a>(
         lock,
         door,
         mqtt_client,
-        duration_in_state: Instant::now(),
+        time_at_statechange: Instant::now(),
+        time_at_sendstate: Instant::now()
     };
 
     info!("Created Store");
@@ -187,8 +201,10 @@ fn construct_lock_state_machine<'a>(
             .publish(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes())
             .unwrap();
 
+        store.time_at_sendstate = Instant::now();
+
         // Update duration
-        store.duration_in_state = Instant::now();
+        store.time_at_statechange = Instant::now();
         log::info!("State: {:?}", state);
     };
     info!("Created global action");
@@ -206,14 +222,14 @@ fn construct_lock_state_machine<'a>(
             .on(Event::Step)
                 .go_to(States::Locked)
                 .only_if(|store| {
-                    store.duration_in_state.elapsed() > Duration::from_secs(10)
+                    store.time_at_statechange.elapsed() > Duration::from_secs(10)
                     && store.door.state == DoorState::Closed})
         .state(States::Unlocked)
             .on(Event::Step)
                 .go_to(States::Locking)
                 .only_if(|store| {
                     store.door.state == DoorState::Closed
-                    && store.duration_in_state.elapsed() > Duration::from_secs(10)
+                    && store.time_at_statechange.elapsed() > Duration::from_secs(10)
                 })
         .state(States::Locking)
             .on(Event::Step)
