@@ -4,6 +4,9 @@ import { BaseHtml } from './base';
 import { connect } from 'mqtt';
 import { jwt } from "@elysiajs/jwt";
 import { Logged, Login } from "./base";
+import { db } from './db/sqlite';
+import * as schema from './db/schema';
+import { eq } from 'drizzle-orm/sql';
 
 
 type EnumState = "locked" | "unlocked"
@@ -19,29 +22,7 @@ client.on('connect', () => {
     });
 });
 
-// this is sample users, we should use a database in production
-const users = [
-    {
-        username: "admin",
-        password: await Bun.password.hash("admin"),
-        apartment: "2TH"
-    },
-    {
-        username: "user",
-        password: await Bun.password.hash("user"),
-        apartment: "4ST"
-    },
-    {
-        username: "simone",
-        password: await Bun.password.hash("simone"),
-        apartment: "4ST"
-    },
-    {
-        username: "hans",
-        password: await Bun.password.hash("hans"),
-        apartment: "4ST"
-    }
-];
+
 
 const Message = ({ count }: { count: number }) => (
     <p id="message">
@@ -78,9 +59,9 @@ const app = new Elysia()
         "/login",
         async ({ jwt, body, set, cookie: { auth } }) => {
             const { password, username } = body;
-
-            const user = users.find((user) => user.username === username);
-
+            
+            const user = db.select().from(schema.users).where(eq(schema.users.username, username)).get()
+        
             if (user && (await Bun.password.verify(password, user.password))) {
                 const token = await jwt.sign({ username, apartment: user.apartment });
 
