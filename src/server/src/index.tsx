@@ -9,11 +9,11 @@ import * as schema from './db/schema';
 import { eq } from 'drizzle-orm/sql';
 
 
-type EnumState = "locked" | "unlocked"
-
+type EnumState = "locked" | "unlocked" | "locking" | "unlocking"
+let secondsLeft = 9;
 const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 
-const client = connect('mqtt://localhost:1883');
+const client = connect('mqtt://192.168.45.62:1883');
 client.on('connect', () => {
     client.subscribe('hello', err => {
         if (!err) {
@@ -139,21 +139,28 @@ const app = new Elysia()
                     case 'locked':
                         ws.send(<State state='locked' />)
                         break;
+                    case 'unlocking':
+                        ws.send(<State state='unlocking' />)
+                        break;
+                    case 'locking': 
+                        ws.send(<State state="locking" />)
+                        secondsLeft=9;
+                        break;
                     case 'unlocked':
                         ws.send(<State state='unlocked' />)
 
-                        let secondsLeft = 9
-                        const interval = setInterval(() => {
-                            ws.send(<CountdownMessage count={secondsLeft} />)
-                            secondsLeft -= 1
-                            console.log("Send interval")
-                        }, 1000)
-
-
-                        setTimeout(() => {
-                            ws.send(<EmptyMessage/>)
-                            clearInterval(interval)
-                        }, 10000)
+                        if (secondsLeft!=0){
+                            const interval = setInterval(() => {
+                                ws.send(<CountdownMessage count={secondsLeft} />)
+                                secondsLeft -= 1
+                                console.log("Send interval")
+                            }, 1000)
+                        
+                            setTimeout(() => {
+                                ws.send(<EmptyMessage/>)
+                                clearInterval(interval)
+                            }, 10000)
+                        }
                         break;
                     default:
                      //   console.log('message not important');
