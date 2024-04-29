@@ -24,9 +24,15 @@ client.on('connect', () => {
 
 
 
-const Message = ({ count }: { count: number }) => (
+const CountdownMessage = ({ count }: { count: number }) => (
     <p id="message">
         Time to lock: {count}
+    </p>
+)
+
+const EmptyMessage = () => (
+    <p id="message">
+       
     </p>
 )
 
@@ -59,9 +65,9 @@ const app = new Elysia()
         "/login",
         async ({ jwt, body, set, cookie: { auth } }) => {
             const { password, username } = body;
-            
+
             const user = db.select().from(schema.users).where(eq(schema.users.username, username)).get()
-        
+
             if (user && (await Bun.password.verify(password, user.password))) {
                 const token = await jwt.sign({ username, apartment: user.apartment });
 
@@ -84,15 +90,14 @@ const app = new Elysia()
             }),
         }
     )
-    .get("/logout", ({ set, cookie: { auth } }) => {
+    .get("/logout", ({ redirect, cookie: { auth } }) => {
         auth.remove();
-        set.redirect = "/";
+        return redirect("/");
     })
-    .get('/home', async ({ set, jwt, cookie: { auth } }) => {
+    .get('/home', async ({ redirect, jwt, cookie: { auth } }) => {
         const authCookie = await jwt.verify(auth.value);
         if (!authCookie) {
-            set.redirect = "/"; // Redirect to login page if user is not authenticated
-            return
+            return redirect("/"); // Redirect to login page if user is not authenticated
         }
         const username = authCookie.username.toString();
         const apartment = authCookie.apartment ? authCookie.apartment.toString() : undefined;
@@ -105,7 +110,7 @@ const app = new Elysia()
                     hx-trigger="click from:#command"
                 >
                     <State state='locked' />
-                    <Message count={10} />
+                    <EmptyMessage/>
                 </div>
                 <div>
                     <button
@@ -137,18 +142,21 @@ const app = new Elysia()
                     case 'unlocked':
                         ws.send(<State state='unlocked' />)
 
-                        let secondsLeft = 10
+                        let secondsLeft = 9
                         const interval = setInterval(() => {
-                            ws.send(<Message count={secondsLeft} />)
+                            ws.send(<CountdownMessage count={secondsLeft} />)
+                            secondsLeft -= 1
+                            console.log("Send interval")
                         }, 1000)
 
 
                         setTimeout(() => {
+                            ws.send(<EmptyMessage/>)
                             clearInterval(interval)
                         }, 10000)
                         break;
                     default:
-                        console.log('message not important');
+                     //   console.log('message not important');
                 }
             });
         },
@@ -156,8 +164,6 @@ const app = new Elysia()
     .post('/send_command', () => {
         publishMessage('OpenDoor'); // Publish "OpenDoor" command
     });
-
-
 
 
 function publishMessage(command: string) {
