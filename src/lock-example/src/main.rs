@@ -57,7 +57,7 @@ const SSID: &str = "hansaskov";
 const PASSWORD: &str = "hansaskov";
 
 // NOTICE: Change this to your MQTT broker URL, make sure the broker is on the same network as you
-const MQTT_URL: &str = "mqtt://192.168.232.62:1883";
+const MQTT_URL: &str = "mqtt://192.168.45.62:1883";
 const MQTT_TOPIC: &str = "hello";
 
 fn main() -> anyhow::Result<()> {

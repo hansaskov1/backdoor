@@ -4,13 +4,16 @@ import { BaseHtml } from './base';
 import { connect } from 'mqtt';
 import { jwt } from "@elysiajs/jwt";
 import { Logged, Login } from "./base";
+import { db } from './db/sqlite';
+import * as schema from './db/schema';
+import { eq } from 'drizzle-orm/sql';
 
 
-type EnumState = "locked" | "unlocked"
-
+type EnumState = "locked" | "unlocked" | "locking" | "unlocking"
+let secondsLeft = 9;
 const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 
-const client = connect('mqtt://localhost:1883');
+const client = connect('mqtt://192.168.45.62:1883');
 client.on('connect', () => {
     client.subscribe('hello', err => {
         if (!err) {
@@ -19,33 +22,17 @@ client.on('connect', () => {
     });
 });
 
-// this is sample users, we should use a database in production
-const users = [
-    {
-        username: "admin",
-        password: await Bun.password.hash("admin"),
-        apartment: "2TH"
-    },
-    {
-        username: "user",
-        password: await Bun.password.hash("user"),
-        apartment: "4ST"
-    },
-    {
-        username: "simone",
-        password: await Bun.password.hash("simone"),
-        apartment: "4ST"
-    },
-    {
-        username: "hans",
-        password: await Bun.password.hash("hans"),
-        apartment: "4ST"
-    }
-];
 
-const Message = ({ count }: { count: number }) => (
+
+const CountdownMessage = ({ count }: { count: number }) => (
     <p id="message">
         Time to lock: {count}
+    </p>
+)
+
+const EmptyMessage = () => (
+    <p id="message">
+       
     </p>
 )
 
@@ -79,7 +66,7 @@ const app = new Elysia()
         async ({ jwt, body, set, cookie: { auth } }) => {
             const { password, username } = body;
 
-            const user = users.find((user) => user.username === username);
+            const user = db.select().from(schema.users).where(eq(schema.users.username, username)).get()
 
             if (user && (await Bun.password.verify(password, user.password))) {
                 const token = await jwt.sign({ username, apartment: user.apartment });
@@ -103,15 +90,14 @@ const app = new Elysia()
             }),
         }
     )
-    .get("/logout", ({ set, cookie: { auth } }) => {
+    .get("/logout", ({ redirect, cookie: { auth } }) => {
         auth.remove();
-        set.redirect = "/";
+        return redirect("/");
     })
-    .get('/home', async ({ set, jwt, cookie: { auth } }) => {
+    .get('/home', async ({ redirect, jwt, cookie: { auth } }) => {
         const authCookie = await jwt.verify(auth.value);
         if (!authCookie) {
-            set.redirect = "/"; // Redirect to login page if user is not authenticated
-            return
+            return redirect("/"); // Redirect to login page if user is not authenticated
         }
         const username = authCookie.username.toString();
         const apartment = authCookie.apartment ? authCookie.apartment.toString() : undefined;
@@ -124,7 +110,7 @@ const app = new Elysia()
                     hx-trigger="click from:#command"
                 >
                     <State state='locked' />
-                    <Message count={10} />
+                    <EmptyMessage/>
                 </div>
                 <div>
                     <button
@@ -153,21 +139,31 @@ const app = new Elysia()
                     case 'locked':
                         ws.send(<State state='locked' />)
                         break;
+                    case 'unlocking':
+                        ws.send(<State state='unlocking' />)
+                        break;
+                    case 'locking': 
+                        ws.send(<State state="locking" />)
+                        secondsLeft=9;
+                        break;
                     case 'unlocked':
                         ws.send(<State state='unlocked' />)
 
-                        let secondsLeft = 10
-                        const interval = setInterval(() => {
-                            ws.send(<Message count={secondsLeft} />)
-                        }, 1000)
-
-
-                        setTimeout(() => {
-                            clearInterval(interval)
-                        }, 10000)
+                        if (secondsLeft!=0){
+                            const interval = setInterval(() => {
+                                ws.send(<CountdownMessage count={secondsLeft} />)
+                                secondsLeft -= 1
+                                console.log("Send interval")
+                            }, 1000)
+                        
+                            setTimeout(() => {
+                                ws.send(<EmptyMessage/>)
+                                clearInterval(interval)
+                            }, 10000)
+                        }
                         break;
                     default:
-                        console.log('message not important');
+                     //   console.log('message not important');
                 }
             });
         },
@@ -175,8 +171,6 @@ const app = new Elysia()
     .post('/send_command', () => {
         publishMessage('OpenDoor'); // Publish "OpenDoor" command
     });
-
-
 
 
 function publishMessage(command: string) {
