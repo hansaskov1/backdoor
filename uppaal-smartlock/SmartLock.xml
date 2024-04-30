@@ -506,34 +506,22 @@ system Human_p, Frontend_p, Backend_p, MQTT_p, Lock_p, DoorSensor_p, LockSensor_
 			</result>
 		</query>
 		<query>
-			<formula>A[] ( 1 &gt; 0 )</formula>
-			<comment/>
-			<result outcome="success" type="quality" timestamp="2024-04-23 10:57:57 +0200">
-			</result>
-		</query>
-		<query>
-			<formula/>
-			<comment>//Validation properties</comment>
-		</query>
-		<query>
-			<formula>E&lt;&gt; Lock_p.Unlocked</formula>
-			<comment>F1: user can unlock using the door using a mobile device</comment>
-			<result outcome="success" type="quality" timestamp="2024-04-23 10:57:57 +0200">
-			</result>
-		</query>
-		<query>
-			<formula/>
-			<comment>//Safety properties</comment>
-		</query>
-		<query>
 			<formula/>
 			<comment>//Liveness properties</comment>
+		</query>
+		<query>
+			<formula/>
+			<comment>//P1 - validation property. User can unlock using a mobile device (frontend)</comment>
 		</query>
 		<query>
 			<formula>E&lt;&gt; Frontend_p.UnlockButton imply Lock_p.Unlocked</formula>
 			<comment>F1: User can unlock using a mobile device (frontend)</comment>
 			<result outcome="success" type="quality" timestamp="2024-04-23 10:57:57 +0200">
 			</result>
+		</query>
+		<query>
+			<formula/>
+			<comment>//P3 - The user interface must update the lock state </comment>
 		</query>
 		<query>
 			<formula>A&lt;&gt; Lock_p.Unlocked imply Frontend_p.DisplayUnlocked</formula>
@@ -548,15 +536,23 @@ system Human_p, Frontend_p, Backend_p, MQTT_p, Lock_p, DoorSensor_p, LockSensor_
 			</result>
 		</query>
 		<query>
+			<formula/>
+			<comment>//P4 - The lock should remain unlocked until the door is closed</comment>
+		</query>
+		<query>
 			<formula>A&lt;&gt; DoorSensor_p.DoorClosed imply not Lock_p.Unlocked</formula>
 			<comment>F4: The lock should remain unlocked until the door is closed</comment>
-			<result outcome="success" type="quality" timestamp="2024-04-23 12:12:10 +0200">
+			<result outcome="success" type="quality" timestamp="2024-04-23 13:23:06 +0200">
 			</result>
 		</query>
 		<query>
-			<formula>E&lt;&gt; Backend_p.SystemError imply Backend_p.SystemRecovered</formula>
+			<formula/>
+			<comment>//NF1 - possible invariant property - System is fault tolerant (heartbeat)</comment>
+		</query>
+		<query>
+			<formula>E[] Backend_p.SystemError imply Backend_p.SystemRecovered</formula>
 			<comment>NF1: System is fault tolerant (heartbeat)</comment>
-			<result outcome="success" type="quality" timestamp="2024-04-23 12:18:14 +0200">
+			<result outcome="success" type="quality" timestamp="2024-04-30 11:19:54 +0200">
 			</result>
 		</query>
 		<query>
@@ -564,21 +560,33 @@ system Human_p, Frontend_p, Backend_p, MQTT_p, Lock_p, DoorSensor_p, LockSensor_
 			<comment>//Bounded liveness</comment>
 		</query>
 		<query>
-			<formula>E[] ((Human_p.DoorCommand and sys_timer &lt;= 1000) imply Lock_p.Unlocked)</formula>
+			<formula/>
+			<comment>//NF2 - The time to unlock should be less than 1s</comment>
+		</query>
+		<query>
+			<formula>A&lt;&gt; ((Human_p.DoorCommand and sys_timer &lt;= 1000) imply Lock_p.Unlocked)</formula>
 			<comment>NF2: The time to unlock should be less than 1s</comment>
-			<result outcome="success" type="quality" timestamp="2024-04-23 10:57:57 +0200">
+			<result outcome="success" type="quality" timestamp="2024-04-30 11:17:22 +0200">
 			</result>
 		</query>
 		<query>
-			<formula>E[] (Human_p.DoorCommand imply (Lock_p.Unlocked and Lock_p.duration_in_state[0] == 10))</formula>
+			<formula/>
+			<comment>//P2 - User can send a command to open the door for 10s</comment>
+		</query>
+		<query>
+			<formula>A&lt;&gt; (Human_p.DoorCommand imply (Lock_p.Unlocked and Lock_p.duration_in_state[0] == 10))</formula>
 			<comment>F2: User can send a command to open the door for 10s</comment>
-			<result outcome="success" type="quality" timestamp="2024-04-23 10:57:57 +0200">
+			<result outcome="success" type="quality" timestamp="2024-04-30 11:18:05 +0200">
 			</result>
 		</query>
 		<query>
-			<formula>E[] ((Lock_p.Unlocking and Lock_p.duration_in_state[0] == 10) imply Lock_p.Locked)</formula>
+			<formula/>
+			<comment>//NF3 - Lock must recover after 10s of unsuccessfully unlocking</comment>
+		</query>
+		<query>
+			<formula>A&lt;&gt; ((Lock_p.Unlocking and Lock_p.duration_in_state[0] == 10) imply Lock_p.Locked)</formula>
 			<comment>NF3: Lock must recover after 10s of unsuccessfully unlocking</comment>
-			<result outcome="success" type="quality" timestamp="2024-04-23 12:24:10 +0200">
+			<result outcome="success" type="quality" timestamp="2024-04-30 11:18:55 +0200">
 			</result>
 		</query>
 	</queries>
