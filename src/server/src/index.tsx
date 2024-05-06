@@ -41,6 +41,12 @@ const State = ({ state }: { state: EnumState }) => (
     </p>
 )
 
+const ErrorMessage = () => (
+    <p id="message">
+        error
+    </p>
+)
+
 
 
 const app = new Elysia()
@@ -193,12 +199,23 @@ const app = new Elysia()
     .ws('/ws', {
         open(ws) {
             console.log('WebSocket connection opened');
-
-            // When a message is recieved from MQTT do something. 
+            let heartbeatTimer : Timer; // Variable to hold the heartbeat timer
+        
+            // Function to handle the heartbeat timeout
+            const handleHeartbeatTimeout = () => {
+                // Send an error message to the UI if no new message received within 15 seconds
+                ws.send(<ErrorMessage/>);
+            };
+ 
             client.on('message', (topic, message, packet) => {
+
                 console.log(
                     'Received Message: ' + message.toString() + ' On topic: ' + topic
                 );
+                clearTimeout(heartbeatTimer);
+
+                heartbeatTimer = setTimeout(handleHeartbeatTimeout, 15000);
+
                 switch (message.toString().toLowerCase()) {
                     case 'locked':
                         ws.send(<State state='locked' />)
@@ -229,7 +246,9 @@ const app = new Elysia()
                     default:
                      //   console.log('message not important');
                 }
+
             });
+            heartbeatTimer = setTimeout(handleHeartbeatTimeout, 15000);
         },
     })
     .post('/send_command', () => {
