@@ -3,7 +3,7 @@ import { html } from '@elysiajs/html';
 import { BaseHtml } from './base';
 import { connect } from 'mqtt';
 import { jwt } from "@elysiajs/jwt";
-import { Logged, Login } from "./base";
+import { Login } from "./base";
 import { db } from './db/sqlite';
 import * as schema from './db/schema';
 import { eq } from 'drizzle-orm/sql';
@@ -12,8 +12,9 @@ import { eq } from 'drizzle-orm/sql';
 type EnumState = "locked" | "unlocked" | "locking" | "unlocking"
 let secondsLeft = 9;
 const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
+console.log(db.select().from(schema.users).all())
 
-const client = connect('mqtt://192.168.45.62:1883');
+const client = connect('mqtt://localhost:1883');
 client.on('connect', () => {
     client.subscribe('hello', err => {
         if (!err) {
@@ -21,8 +22,6 @@ client.on('connect', () => {
         }
     });
 });
-
-
 
 const CountdownMessage = ({ count }: { count: number }) => (
     <p id="message">
@@ -42,6 +41,8 @@ const State = ({ state }: { state: EnumState }) => (
     </p>
 )
 
+
+
 const app = new Elysia()
     .use(html())
     .use(
@@ -54,10 +55,10 @@ const app = new Elysia()
     .get("/", async ({ set, jwt, cookie: { auth } }) => {
         const authCookie = await jwt.verify(auth.value);
 
-        if (authCookie) {
+        /*if (authCookie) {
             set.redirect = "/home"
             return
-        }
+        }*/
 
         return <Login />;
     })
@@ -69,7 +70,7 @@ const app = new Elysia()
             const user = db.select().from(schema.users).where(eq(schema.users.username, username)).get()
 
             if (user && (await Bun.password.verify(password, user.password))) {
-                const token = await jwt.sign({ username, apartment: user.apartment });
+                const token = await jwt.sign({ username, apartment: user.apartment, role: user.role });
 
                 auth.set({
                     value: token,
@@ -92,40 +93,103 @@ const app = new Elysia()
     )
     .get("/logout", ({ redirect, cookie: { auth } }) => {
         auth.remove();
-        return redirect("/");
+        return <Login />;
     })
     .get('/home', async ({ redirect, jwt, cookie: { auth } }) => {
         const authCookie = await jwt.verify(auth.value);
         if (!authCookie) {
             return redirect("/"); // Redirect to login page if user is not authenticated
         }
+    
         const username = authCookie.username.toString();
         const apartment = authCookie.apartment ? authCookie.apartment.toString() : undefined;
-        return (
-            <BaseHtml username={username} apartment={apartment}>
-                <div
-                    id="countdown"
-                    hx-ext="ws"
-                    ws-connect="/ws"
-                    hx-trigger="click from:#command"
-                >
-                    <State state='locked' />
-                    <EmptyMessage/>
-                </div>
-                <div>
-                    <button
-                        id="command"
-                        class="btn btn-primary py--6 px-12 text-4xl"
-                        hx-post="/send_command"
-                        hx-swap="none"
-                        hx-trigger="click"
-                    >
-                        Unlock Door
-                    </button>
-                </div>
-            </BaseHtml>
-        );
+        const role = authCookie.role.toString();
+    
+        const roleComponents = {
+            resident: (
+                <>
+                    <BaseHtml username={username} apartment={apartment} role={role}>
+                        <div id="countdown" hx-ext="ws" ws-connect="/ws" hx-trigger="click from:#command">
+                            <State state='locked' />
+                            <EmptyMessage />
+                        </div>
+                        <div>
+                            <button class="btn btn-primary py--6 px-12 text-2xl mb-3" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Main door
+                            </button>
+                            <button class="btn btn-primary py--6 px-12 text-2xl mb-3" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Back door
+                            </button>
+                            <button class="btn btn-primary py--6 px-12 text-2xl mb-3" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Garage door
+                            </button>
+                        </div>
+                    </BaseHtml>
+                </>
+            ),
+            admin: (
+                <>
+                    <BaseHtml username={username} apartment={apartment} role={role}>
+                        <div id="countdown" hx-ext="ws" ws-connect="/ws" hx-trigger="click from:#command">
+                            <State state='locked' />
+                            <EmptyMessage />
+                        </div>
+                        <div>
+                            <button class="btn btn-primary py--6 px-12 text-2xl mb-3" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Main door
+                            </button>
+                            <button class="btn btn-primary py--6 px-12 text-2xl mb-3" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Back door
+                            </button>
+                            <button class="btn btn-primary py--6 px-12 text-2xl mb-3" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Garage door
+                            </button>
+                            <button class="btn btn-primary py--6 px-12 text-2xl mb-3" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Service door
+                            </button>
+                        </div>
+                    </BaseHtml>
+                </>
+            ),
+            service_personnel: (
+                <>
+                    <BaseHtml username={username} apartment={apartment} role={role}>
+                        <div id="countdown" hx-ext="ws" ws-connect="/ws" hx-trigger="click from:#command">
+                            <State state='locked' />
+                            <EmptyMessage />
+                        </div>
+                        <div>
+                            <button class="btn btn-primary py--6 px-12 text-2xl" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock Service door
+                            </button>
+                        </div>
+                    </BaseHtml>
+                </>
+            ),
+            default: (
+                <>
+                    <BaseHtml username={username} apartment={apartment} role={role}>
+                        <div id="countdown" hx-ext="ws" ws-connect="/ws" hx-trigger="click from:#command">
+                            <State state='locked' />
+                            <EmptyMessage />
+                        </div>
+                        <div>
+                            <button class="btn btn-primary py--6 px-12 text-2xl" hx-post="/send_command" hx-swap="none" hx-trigger="click">
+                                Unlock door
+                            </button>
+                        </div>
+                    </BaseHtml>
+                </>
+            )
+        } as {
+            [key: string]: JSX.Element;
+        };
+        
+        const content = roleComponents[role] || roleComponents.default;
+        return content;
+        
     })
+    
     .ws('/ws', {
         open(ws) {
             console.log('WebSocket connection opened');

@@ -1,4 +1,4 @@
-export const BaseHtml = ({ children, username, apartment }: { children: JSX.Element |undefined | {}; username?: string; apartment?: string }) => {
+export const BaseHtml = ({ children, username, apartment, role }: { children: JSX.Element |undefined | {}; username?: string; apartment?: string; role?: string }) => {
 // This line exports the component named BaseHtml so it can be imported and used elsewhere in your code.
 // the component expects a single prop called children, which can either be undefined or an object.
 
@@ -40,14 +40,14 @@ export const BaseHtml = ({ children, username, apartment }: { children: JSX.Elem
 
 			<main
 				class="container mx-auto"
-				style="display: flex; justify-content: center; align-items: center; height: 100vh;"
+				style="display: flex; justify-content: center; align-items: center; height: 110vh;"
 			>
-				<div class="card w-96 bg-neutral text-neutral-content h-1/2">
+				<div class="card w-96 bg-neutral text-neutral-content">
 					<div class="card-body items-center text-center h-full flex flex-col justify-center">
-						<h1 class="text-3xl">Main entrance</h1>
+						<h1 class="text-3xl">Hi {username}</h1>
 						<div>
 							<p>Apartment: {apartment}</p>
-							<p>Name: {username}</p>
+                            <p>Role: {role}</p>
 						</div>
 						{children}
 					</div>
