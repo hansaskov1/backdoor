@@ -63,8 +63,8 @@ const PASSWORD: &str = "07281803";
 const MQTT_URL: &str = "mqtt://192.168.87.160:8883";
 const MQTT_TOPIC: &str = "B3E2/command";
 
-const MQTT_USERNAME: &str = 'backdoor';
-const MQTT_PASSWORD: &str = '1234';
+const MQTT_USERNAME: Option<&str> = Some("backdoor");
+const MQTT_PASSWORD: Option<&str> = Some("1234");
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
