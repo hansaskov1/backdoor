@@ -16,3 +16,5 @@ Run the following command to apply the mqtt pluging.
 sudo docker exec rabbitmq rabbitmq-plugins enable rabbitmq_mqtt
 sudo docker exec rabbitmq rabbitmqctl enable_feature_flag all
 ```
+
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes

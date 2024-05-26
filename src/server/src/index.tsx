@@ -9,16 +9,22 @@ import * as schema from './db/schema';
 import { eq } from 'drizzle-orm/sql';
 
 
-type EnumState = "locked" | "unlocked" | "locking" | "unlocking"
+type EnumState = "locked" | "unlocked" | "locking" | "unlocking" | "error"
 let secondsLeft = 9;
 const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 console.log(db.select().from(schema.users).all())
 
 const client = connect('mqtt://localhost:1883');
 client.on('connect', () => {
-    client.subscribe('hello', err => {
+    client.subscribe('B3E2/command', err => {
         if (!err) {
-            console.log("Subscribed to 'hello' topic");
+            console.log("Subscribed to 'B3E2/command' topic");
+        }
+    });
+
+    client.subscribe('B3E2/status', err => {
+        if (!err) {
+            console.log("Subscribed to 'B3E2/status' topic");
         }
     });
 });
@@ -199,7 +205,7 @@ const app = new Elysia()
     .ws('/ws', {
         open(ws) {
             console.log('WebSocket connection opened');
-            let heartbeatTimer : Timer; // Variable to hold the heartbeat timer
+            //let heartbeatTimer : Timer; // Variable to hold the heartbeat timer
         
             // Function to handle the heartbeat timeout
             const handleHeartbeatTimeout = () => {
@@ -209,46 +215,49 @@ const app = new Elysia()
  
             client.on('message', (topic, message, packet) => {
 
-                console.log(
-                    'Received Message: ' + message.toString() + ' On topic: ' + topic
-                );
-                clearTimeout(heartbeatTimer);
+                if (topic === "B3E2/command") {
+                    console.log(`Received message on 'B3E2/command' topic: ${message.toString()}`);
+    
+                    switch (message.toString().toLowerCase()) {
+                        case 'locked':
+                            ws.send(<State state='locked' />)
+                            break;
+                        case 'unlocking':
+                            ws.send(<State state='unlocking' />)
+                            break;
+                        case 'locking': 
+                            ws.send(<State state="locking" />)
+                            secondsLeft=9;
+                            break;
+                        case 'unlocked':
+                            ws.send(<State state='unlocked' />)
+    
+                            if (secondsLeft!=0){
+                                const interval = setInterval(() => {
+                                    ws.send(<CountdownMessage count={secondsLeft} />)
+                                    secondsLeft -= 1
+                                    console.log("Send interval")
+                                }, 1000)
+                            
+                                setTimeout(() => {
+                                    ws.send(<EmptyMessage/>)
+                                    clearInterval(interval)
+                                }, 10000)
+                            }
+                            break;
+                        default:
+                            //console.log('unidentified message');
+                    }
+                }
 
-                heartbeatTimer = setTimeout(handleHeartbeatTimeout, 15000);
-
-                switch (message.toString().toLowerCase()) {
-                    case 'locked':
-                        ws.send(<State state='locked' />)
-                        break;
-                    case 'unlocking':
-                        ws.send(<State state='unlocking' />)
-                        break;
-                    case 'locking': 
-                        ws.send(<State state="locking" />)
-                        secondsLeft=9;
-                        break;
-                    case 'unlocked':
-                        ws.send(<State state='unlocked' />)
-
-                        if (secondsLeft!=0){
-                            const interval = setInterval(() => {
-                                ws.send(<CountdownMessage count={secondsLeft} />)
-                                secondsLeft -= 1
-                                console.log("Send interval")
-                            }, 1000)
-                        
-                            setTimeout(() => {
-                                ws.send(<EmptyMessage/>)
-                                clearInterval(interval)
-                            }, 10000)
-                        }
-                        break;
-                    default:
-                     //   console.log('message not important');
+                if (topic === "B3E2/status") {
+                    console.log(`Received message on 'B3E2/status' topic: ${message.toString()}`)
+                    if (message.toString().toLowerCase() === "ESP32 Disconnected with ID: Building 3 ESP 2") {
+                        ws.send(<State state="error" />)
+                    }
                 }
 
             });
-            heartbeatTimer = setTimeout(handleHeartbeatTimeout, 15000);
         },
     })
     .post('/send_command', () => {
@@ -258,7 +267,7 @@ const app = new Elysia()
 
 function publishMessage(command: string) {
     console.log("Publishing Opendoor")
-    client.publish('hello', command, { qos: 1 }, error => {
+    client.publish('B3E2/command', command, { qos: 1 }, error => {
         if (error) {
             console.error(`Error publishing message: ${error}`);
         } else {

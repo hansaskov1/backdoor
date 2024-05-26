@@ -9,14 +9,17 @@ use esp_idf_hal::gpio::{Gpio14, Gpio18, Gpio33, Gpio4};
 use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::log::EspLogger;
 use esp_idf_svc::mqtt::client::{
-    Details, EspMqttClient, EventPayload, MqttClientConfiguration, QoS,
+    Details, EspMqttClient, EventPayload, MqttClientConfiguration, QoS, LwtConfiguration
 };
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_svc::{eventloop::EspSystemEventLoop, nvs::EspDefaultNvsPartition};
 use fluent_state_machine::{StateMachine, StateMachineBuilder};
-use lock_example::component::Component;
-use lock_example::sensor_states::{DoorState, LockState};
+use sem::component::Component;
+use sem::sensor_states::{DoorState, LockState};
 use log::info;
+
+
+
 
 type Lock<'a> = Component<'a, LockState, Gpio18, Gpio33>;
 type Door<'a> = Component<'a, DoorState, Gpio4, Gpio14>;
@@ -53,12 +56,12 @@ struct Store<'a> {
 }
 
 // NOTICE: Change this to your WiFi network SSID
-const SSID: &str = "hansaskov";
-const PASSWORD: &str = "hansaskov";
+const SSID: &str = "04935792";
+const PASSWORD: &str = "07281803";
 
 // NOTICE: Change this to your MQTT broker URL, make sure the broker is on the same network as you
-const MQTT_URL: &str = "mqtt://192.168.45.62:1883";
-const MQTT_TOPIC: &str = "hello";
+const MQTT_URL: &str = "mqtt://192.168.87.160:1883";
+const MQTT_TOPIC: &str = "B3E2/command";
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -73,14 +76,29 @@ fn main() -> anyhow::Result<()> {
         EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))?,
         sys_loop,
     )?;
-
     // Establish connection to WiFi network
     connect_wifi(&mut wifi)?;
 
     // Configure MQTT client
     info!("About to start the MQTT client");
+
+    let esp_id = "Building 3 ESP 2";
+    // Create the payload string with the ESP ID
+    let payload_str = format!("ESP32 Disconnected with ID: {}", esp_id);
+
+    let mqtt_config = MqttClientConfiguration {
+        lwt: Some(LwtConfiguration {
+            topic: "B3E2/status", 
+            payload: payload_str.as_bytes(), 
+            qos: QoS::ExactlyOnce, 
+            retain: false,
+    }),
+        keep_alive_interval: Some(Duration::from_secs(5)),
+        ..Default::default()
+    };
+
     let (mqtt_client, mut mqtt_conn) =
-        EspMqttClient::new(MQTT_URL, &MqttClientConfiguration::default())?;
+        EspMqttClient::new(MQTT_URL, &mqtt_config)?;
     info!("MQTT client connected");
 
     // Crate IO components
@@ -160,24 +178,23 @@ fn main() -> anyhow::Result<()> {
 fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()> {
     wifi.set_configuration(&Configuration::Client(ClientConfiguration {
         ssid: SSID.try_into().unwrap(),
-        auth_method: AuthMethod::WPA2WPA3Personal,
+        auth_method: AuthMethod::WPA2Personal,
         password: PASSWORD.try_into().unwrap(),
         ..Default::default()
     }))?;
 
     wifi.start()?;
-    info!("Wifi started");
+    log::info!("Wifi started");
 
-    info!("Connecting WiFi...");
+    log::info!("Connecting WiFi...");
     wifi.connect()?;
-    info!("Wifi connected");
+    log::info!("Wifi connected");
 
     wifi.wait_netif_up()?;
-    info!("Wifi netif up");
+    log::info!("Wifi netif up");
 
     Ok(())
 }
-
 fn construct_lock_state_machine<'a>(
     lock: Lock<'a>,
     door: Door<'a>,
