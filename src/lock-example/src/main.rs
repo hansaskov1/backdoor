@@ -60,8 +60,11 @@ const SSID: &str = "04935792";
 const PASSWORD: &str = "07281803";
 
 // NOTICE: Change this to your MQTT broker URL, make sure the broker is on the same network as you
-const MQTT_URL: &str = "mqtt://192.168.87.160:1883";
+const MQTT_URL: &str = "mqtt://192.168.87.160:8883";
 const MQTT_TOPIC: &str = "B3E2/command";
+
+const MQTT_USERNAME: &str = 'backdoor';
+const MQTT_PASSWORD: &str = '1234';
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -94,6 +97,8 @@ fn main() -> anyhow::Result<()> {
             retain: false,
     }),
         keep_alive_interval: Some(Duration::from_secs(5)),
+        username: MQTT_USERNAME,
+        password: MQTT_PASSWORD,
         ..Default::default()
     };
 
