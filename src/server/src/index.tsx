@@ -14,7 +14,7 @@ let secondsLeft = 9;
 const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 console.log(db.select().from(schema.users).all())
 
-const client = connect('mqtt://localhost:1883', {
+const client = connect('mqtt://localhost:8883', {
     username: 'backdoor',
     password: '1234'
 });
