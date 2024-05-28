@@ -18,9 +18,6 @@ use sem::component::Component;
 use sem::sensor_states::{DoorState, LockState};
 use log::info;
 
-
-
-
 type Lock<'a> = Component<'a, LockState, Gpio18, Gpio33>;
 type Door<'a> = Component<'a, DoorState, Gpio4, Gpio14>;
 
@@ -95,7 +92,7 @@ fn main() -> anyhow::Result<()> {
             payload: payload_str.as_bytes(), 
             qos: QoS::ExactlyOnce, 
             retain: false,
-    }),
+        }),
         keep_alive_interval: Some(Duration::from_secs(5)),
         username: MQTT_USERNAME,
         password: MQTT_PASSWORD,

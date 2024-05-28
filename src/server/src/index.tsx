@@ -14,7 +14,11 @@ let secondsLeft = 9;
 const clientId = `mqtt_client_${Math.random().toString(16).slice(3)}`;
 console.log(db.select().from(schema.users).all())
 
-const client = connect('mqtt://localhost:1883');
+const client = connect('mqtt://localhost:1883', {
+    username: 'backdoor',
+    password: '1234'
+});
+
 client.on('connect', () => {
     client.subscribe('B3E2/command', err => {
         if (!err) {
@@ -252,7 +256,7 @@ const app = new Elysia()
 
                 if (topic === "B3E2/status") {
                     console.log(`Received message on 'B3E2/status' topic: ${message.toString()}`)
-                    if (message.toString().toLowerCase() === "ESP32 Disconnected with ID: Building 3 ESP 2") {
+                    if (message.toString() === "ESP32 Disconnected with ID: Building 3 ESP 2") {
                         ws.send(<State state="error" />)
                     }
                 }
