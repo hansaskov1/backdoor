@@ -139,7 +139,7 @@ fn main() -> anyhow::Result<()> {
         state_machine
             .store
             .mqtt_client
-            .subscribe(MQTT_TOPIC, QoS::AtMostOnce)?;
+            .subscribe(MQTT_TOPIC, QoS::ExactlyOnce)?;
 
         info!("Subscribed to {MQTT_TOPIC}");
         std::thread::sleep(Duration::from_millis(500));
@@ -160,7 +160,7 @@ fn main() -> anyhow::Result<()> {
 
                 state_machine.store
                     .mqtt_client
-                    .publish(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes())
+                    .publish(MQTT_TOPIC, QoS::ExactlyOnce, false, message.as_bytes())
                     .unwrap();
     
                 state_machine.store.time_at_sendstate = Instant::now();
@@ -217,7 +217,7 @@ fn construct_lock_state_machine<'a>(
         let message = format!("{:?}", state);
         store
             .mqtt_client
-            .publish(MQTT_TOPIC, QoS::AtMostOnce, false, message.as_bytes())
+            .publish(MQTT_TOPIC, QoS::ExactlyOnce, false, message.as_bytes())
             .unwrap();
 
         store.time_at_sendstate = Instant::now();
