@@ -1,0 +1,26 @@
+{
+  "name": "app",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.tsx",
+    "generate": "drizzle-kit generate:sqlite",
+    "migrate": "bun run src/db/migrate.ts",
+    "seed": "bun run src/db/seed.ts"
+  },
+  "dependencies": {
+    "@elysiajs/html": "^1.0.2",
+    "@elysiajs/jwt": "^1.0.2",
+    "drizzle-orm": "^0.30.9",
+    "ejs": "^3.1.10",
+    "elysia": "latest",
+    "mqtt": "^5.5.3",
+    "oslo": "^1.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}

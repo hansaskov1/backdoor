@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "author": "Sergio Gasquez Arcos",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-breadboard-half",
+      "id": "bb1",
+      "top": -42.3,
+      "left": -217.5,
+      "rotate": 90,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-breadboard-half",
+      "id": "bb2",
+      "top": -42.3,
+      "left": -6.3,
+      "rotate": 90,
+      "attrs": {}
+    },
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0.67,
+      "attrs": { "builder": "rust-std-esp" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 138.35,
+      "left": 124.8,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-pushbutton-6mm",
+      "id": "btn1",
+      "top": 74.6,
+      "left": -105.6,
+      "attrs": { "color": "green" }
+    },
+    {
+      "type": "wokwi-pushbutton-6mm",
+      "id": "btn2",
+      "top": 113,
+      "left": -105.6,
+      "attrs": { "color": "green" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": 102,
+      "left": 195.8,
+      "attrs": { "color": "red", "flip": "1" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 99.95,
+      "left": 124.8,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led2",
+      "top": 63.6,
+      "left": 196.2,
+      "attrs": { "color": "red", "flip": "1" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:3V3", "bb1:12t.a", "green", [ "h0" ] ],
+    [ "btn1:2.r", "esp:33", "orange", [ "h20", "v48.4" ] ],
+    [ "bb1:12t.e", "bb1:bp.10", "red", [ "h0" ] ],
+    [ "btn1:1.l", "bb1:17b.j", "", [ "$bb" ] ],
+    [ "btn1:2.l", "bb1:19b.j", "", [ "$bb" ] ],
+    [ "btn1:1.r", "bb1:17b.g", "", [ "$bb" ] ],
+    [ "btn1:2.r", "bb1:19b.g", "", [ "$bb" ] ],
+    [ "bb1:bp.14", "btn1:1.l", "red", [ "h0" ] ],
+    [ "btn2:1.l", "bb1:21b.j", "", [ "$bb" ] ],
+    [ "btn2:2.l", "bb1:23b.j", "", [ "$bb" ] ],
+    [ "btn2:1.r", "bb1:21b.g", "", [ "$bb" ] ],
+    [ "btn2:2.r", "bb1:23b.g", "", [ "$bb" ] ],
+    [ "bb1:bp.17", "btn2:1.l", "red", [ "h0" ] ],
+    [ "btn2:2.r", "esp:14", "green", [ "h0" ] ],
+    [ "led1:C", "bb2:tn.20", "black", [ "v0" ] ],
+    [ "bb2:tn.16", "led2:C", "black", [ "h0" ] ],
+    [ "r2:1", "esp:18", "orange", [ "v0" ] ],
+    [ "r1:1", "esp:4", "green", [ "v0" ] ],
+    [ "bb2:12b.f", "bb2:tn.10", "black", [ "h0" ] ],
+    [ "bb2:12b.j", "esp:GND.2", "black", [ "h0" ] ],
+    [ "r1:1", "bb2:24b.h", "", [ "$bb" ] ],
+    [ "r1:2", "bb2:24t.d", "", [ "$bb" ] ],
+    [ "led1:A", "bb2:24t.a", "", [ "$bb" ] ],
+    [ "led2:A", "bb2:20t.a", "", [ "$bb" ] ],
+    [ "r2:1", "bb2:20b.h", "", [ "$bb" ] ],
+    [ "r2:2", "bb2:20t.d", "", [ "$bb" ] ]
+  ],
+  "serialMonitor": { "display": "terminal" },
+  "dependencies": {}
+}
